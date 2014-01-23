@@ -1,0 +1,7 @@
+.settings/org.eclipse.jdt.core.prefs
+target/classes/META-INF/MANIFEST.MF
+target/classes/META-INF/maven/com.google.apis-samples/youtube-cmd-line-sample/pom.properties
+target/classes/META-INF/maven/com.google.apis-samples/youtube-cmd-line-sample/pom.xml
+target/classes/client_secrets.json
+target/classes/com/google/api/services/samples/youtube/cmdline/YouTubeSample$1.class
+target/classes/com/google/api/services/samples/youtube/cmdline/YouTubeSample.class
