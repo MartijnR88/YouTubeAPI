@@ -32,19 +32,32 @@ import com.google.api.services.youtube.YouTubeScopes;
 import com.google.api.services.youtube.model.ResourceId;
 import com.google.api.services.youtube.model.SearchListResponse;
 import com.google.api.services.youtube.model.SearchResult;
+import com.google.api.services.youtube.model.Video;
+import com.google.api.services.youtube.model.VideoListResponse;
+import com.google.api.services.youtube.model.VideoStatistics;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
+import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
+
+import javax.swing.plaf.basic.BasicInternalFrameTitlePane.MaximizeAction;
 
 /**
  * Main class for the YouTube Data API command line sample.
@@ -62,7 +75,7 @@ public class YouTubeSample {
   private static final java.io.File DATA_STORE_DIR =
       new java.io.File(System.getProperty("user.home"), ".store/youtube_sample");
 
-  private static final long NUMBER_OF_VIDEOS_RETURNED = 25;
+  private static final long NUMBER_OF_VIDEOS_RETURNED = 10;
 
   /**
    * Global instance of the {@link DataStoreFactory}. The best practice is to make it a single
@@ -141,26 +154,106 @@ public class YouTubeSample {
           }
       }).setApplicationName("youtube-cmdline-search-sample").build();
     
-//  		// queryTerm
+      //retrieveDatafiles();
+      
+      ArrayList<String> temp = getIndices("D:/workspace/YouTubeAPI/Dataset/drag hunt horse dog top 10.txt");
+      List<SearchResult> result = getRelatedVideos(temp.get(0), 50L);
+      
+//      for (int i = 0; i < temp.size(); i++) {
+//    	   result.add(getRelatedVideos(temp.get(i)));
+//      }
+      
+      List<List<SearchResult>> result2 = new ArrayList<List<SearchResult>>();
+      for (int i = 0; i < result.size(); i++) {
+    	  result2.add(getRelatedVideos(result.get(i).getId().getVideoId(), 50L));
+      }
+      
+      Map<String, Integer> resultmap = new HashMap<String, Integer>();
+      
+      for (int j = 0; j < result2.size(); j++) {
+    	  List<SearchResult> res = result2.get(j);
+    	  for (int k = 0; k < res.size(); k++) {
+    		  String s = res.get(k).getId().getVideoId();
+    		  if (!(resultmap.containsKey(s))) {
+    			  resultmap.put(s, 1);
+    		  }
+    		  else {
+    			  resultmap.put(s, resultmap.get(s) + 1);
+    		  }    			  
+    	  }
+      }
+      
+      ValueComparator bvc = new ValueComparator(resultmap);
+      TreeMap<String, Integer> sorted_map = new TreeMap<String, Integer>(bvc);
+      sorted_map.putAll(resultmap);
+      
+      System.out.println("Total number of videos: " + sorted_map.size());
+      
+      Iterator<Integer> it = sorted_map.values().iterator();
+      int count = 0;
+      int sum = 0;
+      while (it.hasNext()) {
+    	  int res = it.next();
+    	  
+    	  sum += res;
+    	  
+    	  if (res != 1) {
+    		  count++;
+    	  }
+      }
+      
+      System.out.println("Number of videos that occur in more related videos lists: " + count);
+      
+      float mean = sum / (float) sorted_map.size();
+      System.out.println("Sum: " + sum);
+      System.out.println("Mean: " + mean);
+      
+      float var = 0;
+      Iterator<Integer> l = sorted_map.values().iterator();
+      while (l.hasNext()) {
+    	  float a = l.next();
+    	  var += (mean - a) * (mean - a);
+      }
+            
+      float a = var / (float) sorted_map.size();      
+      float stdev = (float) Math.sqrt(a);
+      System.out.println("St dev: " + stdev);
+      System.out.println(sorted_map.toString());
+      
+  		// queryTerm
 //  		String queryTerm = getInputQuery();
-//
+//  		  		
 //  		// Define the API request for retrieving search results
-//  		YouTube.Search.List search = unauthorized.search().list("id, snippet");
+//  		YouTube.Search.List search = authorized.search().list("id, snippet");   
+//	    // Get related videos
+//	    //search.setRelatedToVideoId(queryTerm);
+//	    // Set developer key
+//	   // search.setKey("AIzaSyAAQuVMA9K_bakrLGwFmTC_a4Foml6sv48");
+//	    // Restrict the search results to only include videos. See:
+//	    // https://developers.google.com/youtube/v3/docs/search/list#type
+//	   //search.setType("video");	      
+//	    // To increase efficiency, only retrieve the fields that the
+//	    // application uses.
+//	   //search.setFields("items(etag, id/kind,id/videoId,snippet/title)");
+//	   //search.setMaxResults(NUMBER_OF_VIDEOS_RETURNED);	
 //             
 //  		//Set properties
+//  		search.setVideoCategoryId("1");
 //  		setParameters(queryTerm, search);
 //    
 //    	// Call the API and print response
 //    	SearchListResponse searchResponse = search.execute();
 //    	List<SearchResult> searchResultList = searchResponse.getItems();
 //    
+////    	writeToFile("Waar kerst- en paastijd samenvallen top 10.txt", searchResultList.iterator(), queryTerm);
+//  	
 //    	String videoId = searchResultList.iterator().next().getId().getVideoId();
 //    	String videoTitle = searchResultList.iterator().next().getSnippet().getTitle();
 //    	System.out.println("VideoId: " + videoId);
 //    	System.out.println("VideoTitle: " + videoTitle);
-
+    	
       //testAuthorizationDifference();
-      testRelatedVideos();
+      //testRelatedVideos();
       
     } catch (IOException e) {
       System.err.println(e.getMessage());
@@ -170,6 +263,49 @@ public class YouTubeSample {
     System.exit(1);
   }
 
+	public static ArrayList<String> getIndices(String filename) throws IOException {
+		ArrayList<String> res = new ArrayList<String>();
+
+		// read txt files
+		BufferedReader br = new BufferedReader(new FileReader(filename));
+		try {
+			String line = br.readLine();
+			
+			while (line != null) {
+				if (line.contains("Video Id:")) {
+					res.add(line.substring(11));
+				}
+				line = br.readLine();
+			}
+		}
+		finally {
+			br.close();
+		}
+		return res;
+	}  
+  
+	private static List<SearchResult> getRelatedVideos(String index, Long videosReturned) throws IOException {
+		// Define the API request for retrieving search results
+		YouTube.Search.List search = authorized.search().list("id, snippet");   
+    // Get related videos
+    search.setRelatedToVideoId(index);
+    // Set developer key
+   search.setKey("AIzaSyAAQuVMA9K_bakrLGwFmTC_a4Foml6sv48");
+    // Restrict the search results to only include videos. See:
+    // https://developers.google.com/youtube/v3/docs/search/list#type
+   search.setType("video");	      
+    // To increase efficiency, only retrieve the fields that the
+    // application uses.
+   search.setFields("items(etag, id/kind,id/videoId,snippet/title)");
+   search.setMaxResults(videosReturned);	
+
+	// Call the API and print response
+	SearchListResponse searchResponse = search.execute();
+	List<SearchResult> searchResultList = searchResponse.getItems();
+	
+	return searchResultList;
+	}
+	
 private static void testRelatedVideos() throws IOException {
 	// List all videoId's for which to find the related videos
 	List<String> queryTerms = new ArrayList<String>();
@@ -212,6 +348,73 @@ private static void testRelatedVideos() throws IOException {
 	  	  writeToCsv(searchResultList.iterator(), queryTerm);
 	    }
     }
+}
+
+private static void retrieveDatafiles() throws IOException {
+	// List all videoId's for which to find the related videos
+	List<String> queryTerms = new ArrayList<String>();
+    queryTerms.add("Kerstmis paasfeest chocola paasei beeld geluid");
+    queryTerms.add("Imitat Charlie Chaplin");
+    queryTerms.add("Reportage Marbles Daan Roosegaarde Almere");
+    queryTerms.add("Drag hunt horse dog");
+    queryTerms.add("monkey eat wheat cute");
+    queryTerms.add("Airshow Seppe");
+    queryTerms.add("chief police class inspection");
+    queryTerms.add("februaristaking amsterdam");
+    queryTerms.add("Extreme bike sports Amsterdam 2000");
+    queryTerms.add("Arabian gun twirler");
+        
+    for (int i = 0; i < queryTerms.size(); i++) {
+  	  	// Get videoId
+  	  	String queryTerm = queryTerms.get(i);
+
+	    // Define the API request for retrieving search results
+	    YouTube.Search.List search = unauthorized.search().list("id, snippet");
+	    	    
+  		//Set properties
+  		setParameters(queryTerm, search);
+  		
+	    // Call the API and print response
+	    SearchListResponse searchResponse = search.execute();
+	    List<SearchResult> searchResultList = searchResponse.getItems();
+	    
+	    // Write the response to CSV
+	    if (searchResultList != null) {
+	  	  writeToFile(searchResultList.iterator(), queryTerm);
+	    }
+    }
+}
+
+private static void writeToFile(Iterator<SearchResult> iteratorSearchResults,
+		String query) throws IOException {
+	
+	PrintWriter writer = new PrintWriter("Dataset/" + query + " top " + NUMBER_OF_VIDEOS_RETURNED + ".txt", "UTF-8");
+	
+    writer.println("\n=============================================================");
+    writer.println(
+            "   First " + NUMBER_OF_VIDEOS_RETURNED + " videos for search on \"" + query + "\".");
+    writer.println("=============================================================\n");
+
+    if (!iteratorSearchResults.hasNext()) {
+    	writer.println(" There aren't any results for your query.");
+    }
+        
+    while (iteratorSearchResults.hasNext()) {
+
+        SearchResult singleVideo = iteratorSearchResults.next();
+        ResourceId rId = singleVideo.getId();        
+
+        // Confirm that the result represents a video. Otherwise, the
+        // item will not contain a video ID.
+        if (rId.getKind().equals("youtube#video")) {
+        	writer.println(" Etag: " + singleVideo.getEtag());
+        	writer.println(" Video Id: " + rId.getVideoId());
+        	writer.println(" Title: " + singleVideo.getSnippet().getTitle());
+        	writer.println("\n-------------------------------------------------------------\n");
+        }
+    }
+	
+	writer.close();
 }
 
 private static void writeToCsv(Iterator<SearchResult> iterator, String queryTerm) throws IOException {
@@ -432,7 +635,9 @@ private static void writeToCsv() throws IOException {
 }
 
 private static void prettyPrint(Iterator<SearchResult> iteratorSearchResults,
-		String query) {
+		String query) throws IOException {
+	String videoIds = "";
+	
     System.out.println("\n=============================================================");
     System.out.println(
             "   First " + NUMBER_OF_VIDEOS_RETURNED + " videos for search on \"" + query + "\".");
@@ -445,7 +650,7 @@ private static void prettyPrint(Iterator<SearchResult> iteratorSearchResults,
     while (iteratorSearchResults.hasNext()) {
 
         SearchResult singleVideo = iteratorSearchResults.next();
-        ResourceId rId = singleVideo.getId();
+        ResourceId rId = singleVideo.getId();        
 
         // Confirm that the result represents a video. Otherwise, the
         // item will not contain a video ID.
@@ -455,8 +660,31 @@ private static void prettyPrint(Iterator<SearchResult> iteratorSearchResults,
             System.out.println(" Title: " + singleVideo.getSnippet().getTitle());
             //System.out.println(" Published At " + singleVideo.getSnippet().getPublishedAt());
             System.out.println("\n-------------------------------------------------------------\n");
+            videoIds += rId.getVideoId() + ",";
         }
     }
+    
+	YouTube.Videos.List list = authorized.videos().list("id, snippet, statistics");
+	videoIds = videoIds.substring(0, videoIds.length()-1);
+	list.setId(videoIds);
+	VideoListResponse response = list.execute();
+	List<Video> videos = response.getItems();
+	BigInteger champion = new BigInteger("0");
+	String video = "";
+	for (int i = 0; i < videos.size(); i++) {
+		Video vid = videos.get(i);
+		BigInteger views = vid.getStatistics().getViewCount();
+		System.out.println(vid.getSnippet().getTitle());
+		System.out.println(vid.getId());
+		System.out.println(views);
+		System.out.println(vid.getSnippet().getPublishedAt());
+		if (views.compareTo(champion) > 0) {
+			champion = views;
+			video = vid.getSnippet().getTitle();
+		}
+	}
+	System.out.println(champion);
+	System.out.println(video);
   }
 
   private static String getInputQuery() throws IOException {
@@ -474,3 +702,20 @@ private static void prettyPrint(Iterator<SearchResult> iteratorSearchResults,
 	return inputQuery;
   }
 }
+
+  class ValueComparator implements Comparator<String> {
+
+	    Map<String, Integer> base;
+	    public ValueComparator(Map<String, Integer> base) {
+	        this.base = base;
+	    }
+
+	    // Note: this comparator imposes orderings that are inconsistent with equals.    
+	    public int compare(String a, String b) {
+	        if (base.get(a) >= base.get(b)) {
+	            return -1;
+	        } else {
+	            return 1;
+	        } // returning 0 would merge keys
+	    }
+  }
