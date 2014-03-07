@@ -38,6 +38,7 @@ import com.google.api.services.youtube.model.VideoStatistics;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
@@ -58,6 +59,18 @@ import java.util.Set;
 import java.util.TreeMap;
 
 import javax.swing.plaf.basic.BasicInternalFrameTitlePane.MaximizeAction;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.TransformerException;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathExpressionException;
+import javax.xml.xpath.XPathFactory;
+
+import org.w3c.dom.Document;
+import org.w3c.dom.NodeList;
+import org.xml.sax.SAXException;
 
 /**
  * Main class for the YouTube Data API command line sample.
@@ -75,7 +88,10 @@ public class YouTubeSample {
   private static final java.io.File DATA_STORE_DIR =
       new java.io.File(System.getProperty("user.home"), ".store/youtube_sample");
 
-  private static final long NUMBER_OF_VIDEOS_RETURNED = 10;
+  private static final long NUMBER_OF_VIDEOS_RETURNED = 50;
+  
+	private static XPath xPath = XPathFactory.newInstance().newXPath();
+
 
   /**
    * Global instance of the {@link DataStoreFactory}. The best practice is to make it a single
@@ -153,104 +169,125 @@ public class YouTubeSample {
           public void initialize(HttpRequest request) throws IOException {
           }
       }).setApplicationName("youtube-cmdline-search-sample").build();
-    
-      //retrieveDatafiles();
+
+getRelatedVideoStatistics();       
+ 
+ //     retrieveDatafiles();
+  //    retrieveRelatedVideofiles();
       
-      ArrayList<String> temp = getIndices("D:/workspace/YouTubeAPI/Dataset/drag hunt horse dog top 10.txt");
-      List<SearchResult> result = getRelatedVideos(temp.get(0), 50L);
+//  	YouTube.Videos.List list = authorized.videos().list("id, snippet, contentDetails, recordingDetails, topicDetails");
+//  	list.setId("NjHSy6QUv4s");
+//  	VideoListResponse response = list.execute();
+//  	List<Video> videos = response.getItems();
+//  	System.out.println(videos.get(0).getSnippet().getTitle());
+//  	System.out.println(videos.get(0).getSnippet().getDescription());
+//  	System.out.println("Tags: " + videos.get(0).getSnippet().getTags());
+//  	System.out.println("Cat id: " + videos.get(0).getSnippet().getCategoryId());
+//  	System.out.println(videos.get(0).getContentDetails().getDuration());
+//  	//System.out.println(videos.get(0).getRecordingDetails().getLocation());
+//  	//System.out.println(videos.get(0).getRecordingDetails().getRecordingDate());
+//  	System.out.println(videos.get(0).getTopicDetails().getTopicIds());
+//  	System.out.println(videos.get(0).getTopicDetails().getRelevantTopicIds());
       
+      //ArrayList<String> temp = getIndices("D:/workspace/YouTubeAPI/Dataset/extreme bike sports amsterdam 2000 top 50.txt");
+      //List<List<SearchResult>> result = new ArrayList<List<SearchResult>>();
+//      
 //      for (int i = 0; i < temp.size(); i++) {
-//    	   result.add(getRelatedVideos(temp.get(i)));
+//    	  List<SearchResult> result = getRelatedVideos(temp.get(i), 50L);
+//    	  writeToFile(result.iterator(), temp.get(i));
+//    	   //result.add(getRelatedVideos(temp.get(i), 50L));
 //      }
       
-      List<List<SearchResult>> result2 = new ArrayList<List<SearchResult>>();
-      for (int i = 0; i < result.size(); i++) {
-    	  result2.add(getRelatedVideos(result.get(i).getId().getVideoId(), 50L));
-      }
+//      List<List<SearchResult>> result2 = new ArrayList<List<SearchResult>>();
+//      for (int i = 0; i < result.size(); i++) {
+//    	  result2.add(getRelatedVideos(result.get(i).getId().getVideoId(), 50L));
+//      }
       
-      Map<String, Integer> resultmap = new HashMap<String, Integer>();
-      
-      for (int j = 0; j < result2.size(); j++) {
-    	  List<SearchResult> res = result2.get(j);
-    	  for (int k = 0; k < res.size(); k++) {
-    		  String s = res.get(k).getId().getVideoId();
-    		  if (!(resultmap.containsKey(s))) {
-    			  resultmap.put(s, 1);
-    		  }
-    		  else {
-    			  resultmap.put(s, resultmap.get(s) + 1);
-    		  }    			  
-    	  }
-      }
-      
-      ValueComparator bvc = new ValueComparator(resultmap);
-      TreeMap<String, Integer> sorted_map = new TreeMap<String, Integer>(bvc);
-      sorted_map.putAll(resultmap);
-      
-      System.out.println("Total number of videos: " + sorted_map.size());
-      
-      Iterator<Integer> it = sorted_map.values().iterator();
-      int count = 0;
-      int sum = 0;
-      while (it.hasNext()) {
-    	  int res = it.next();
-    	  
-    	  sum += res;
-    	  
-    	  if (res != 1) {
-    		  count++;
-    	  }
-      }
-      
-      System.out.println("Number of videos that occur in more related videos lists: " + count);
-      
-      float mean = sum / (float) sorted_map.size();
-      System.out.println("Sum: " + sum);
-      System.out.println("Mean: " + mean);
-      
-      float var = 0;
-      Iterator<Integer> l = sorted_map.values().iterator();
-      while (l.hasNext()) {
-    	  float a = l.next();
-    	  var += (mean - a) * (mean - a);
-      }
-            
-      float a = var / (float) sorted_map.size();      
-      float stdev = (float) Math.sqrt(a);
-      System.out.println("St dev: " + stdev);
-      System.out.println(sorted_map.toString());
+//      Map<String, Integer> resultmap = new HashMap<String, Integer>();
+//      
+//      for (int j = 0; j < result.size(); j++) {
+//    	  List<SearchResult> res = result.get(j);
+//    	  for (int k = 0; k < res.size(); k++) {
+//    		  String s = res.get(k).getId().getVideoId();
+//    		  if (!(resultmap.containsKey(s))) {
+//    			  resultmap.put(s, 1);
+//    		  }
+//    		  else {
+//    			  resultmap.put(s, resultmap.get(s) + 1);
+//    		  }    			  
+//    	  }
+//      }
+//      
+//      ValueComparator bvc = new ValueComparator(resultmap);
+//      TreeMap<String, Integer> sorted_map = new TreeMap<String, Integer>(bvc);
+//      sorted_map.putAll(resultmap);
+//      
+//      System.out.println("Total number of videos: " + sorted_map.size());
+//      
+//      Iterator<Integer> it = sorted_map.values().iterator();
+//      int count = 0;
+//      int sum = 0;
+//      while (it.hasNext()) {
+//    	  int res = it.next();
+//    	  
+//    	  sum += res;
+//    	  
+//    	  if (res != 1) {
+//    		  count++;
+//    	  }
+//      }
+//      
+//      System.out.println("Number of videos that occur in more related videos lists: " + count);
+//      
+//      float mean = sum / (float) sorted_map.size();
+//      System.out.println("Sum: " + sum);
+//      System.out.println("Mean: " + mean);
+//      
+//      float var = 0;
+//      Iterator<Integer> l = sorted_map.values().iterator();
+//      while (l.hasNext()) {
+//    	  float a = l.next();
+//    	  var += (mean - a) * (mean - a);
+//      }
+//            
+//      float a = var / (float) sorted_map.size();      
+//      float stdev = (float) Math.sqrt(a);
+//      System.out.println("St dev: " + stdev);
+//      System.out.println(sorted_map.toString());
       
   		// queryTerm
 //  		String queryTerm = getInputQuery();
-//  		  		
-//  		// Define the API request for retrieving search results
+////  		  		
+////  		// Define the API request for retrieving search results
 //  		YouTube.Search.List search = authorized.search().list("id, snippet");   
-//	    // Get related videos
-//	    //search.setRelatedToVideoId(queryTerm);
-//	    // Set developer key
-//	   // search.setKey("AIzaSyAAQuVMA9K_bakrLGwFmTC_a4Foml6sv48");
-//	    // Restrict the search results to only include videos. See:
-//	    // https://developers.google.com/youtube/v3/docs/search/list#type
-//	   //search.setType("video");	      
-//	    // To increase efficiency, only retrieve the fields that the
-//	    // application uses.
-//	   //search.setFields("items(etag, id/kind,id/videoId,snippet/title)");
-//	   //search.setMaxResults(NUMBER_OF_VIDEOS_RETURNED);	
-//             
-//  		//Set properties
-//  		search.setVideoCategoryId("1");
+////	    // Get related videos
+////	    //search.setRelatedToVideoId(queryTerm);
+////	    // Set developer key
+////	   // search.setKey("AIzaSyAAQuVMA9K_bakrLGwFmTC_a4Foml6sv48");
+////	    // Restrict the search results to only include videos. See:
+////	    // https://developers.google.com/youtube/v3/docs/search/list#type
+////	   //search.setType("video");	      
+////	    // To increase efficiency, only retrieve the fields that the
+////	    // application uses.
+////	   //search.setFields("items(etag, id/kind,id/videoId,snippet/title)");
+////	   //search.setMaxResults(NUMBER_OF_VIDEOS_RETURNED);	
+////             
+////  		//Set properties
+////  		search.setVideoCategoryId("1");
 //  		setParameters(queryTerm, search);
-//    
-//    	// Call the API and print response
+////    
+////    	// Call the API and print response
 //    	SearchListResponse searchResponse = search.execute();
 //    	List<SearchResult> searchResultList = searchResponse.getItems();
-//    
-////    	writeToFile("Waar kerst- en paastijd samenvallen top 10.txt", searchResultList.iterator(), queryTerm);
-//  	
-//    	String videoId = searchResultList.iterator().next().getId().getVideoId();
-//    	String videoTitle = searchResultList.iterator().next().getSnippet().getTitle();
-//    	System.out.println("VideoId: " + videoId);
-//    	System.out.println("VideoTitle: " + videoTitle);
+//    	System.out.println("Number of search results: " + searchResultList.size());
+////    
+//////    	writeToFile("Waar kerst- en paastijd samenvallen top 10.txt", searchResultList.iterator(), queryTerm);
+////  	
+//    	prettyPrint(searchResultList.iterator(), queryTerm);
+////    	String videoId = searchResultList.iterator().next().getId().getVideoId();
+////    	String videoTitle = searchResultList.iterator().next().getSnippet().getTitle();
+////    	System.out.println("VideoId: " + videoId);
+////    	System.out.println("VideoTitle: " + videoTitle);
     	
       //testAuthorizationDifference();
       //testRelatedVideos();
@@ -283,6 +320,28 @@ public class YouTubeSample {
 		}
 		return res;
 	}  
+	
+	public static ArrayList<String> getTitles(String filename) throws IOException {
+		ArrayList<String> res = new ArrayList<String>();
+
+		// read txt files
+		BufferedReader br = new BufferedReader(new FileReader(filename));
+		try {
+			String line = br.readLine();
+			
+			while (line != null) {
+				if (line.contains("Title:")) {
+					res.add(line.substring(8));
+				}
+				line = br.readLine();
+			}
+		}
+		finally {
+			br.close();
+		}
+		return res;
+	}  
+
   
 	private static List<SearchResult> getRelatedVideos(String index, Long videosReturned) throws IOException {
 		// Define the API request for retrieving search results
@@ -350,20 +409,257 @@ private static void testRelatedVideos() throws IOException {
     }
 }
 
+private static void getSearchResultVideoStatistics() throws XPathExpressionException, SAXException, IOException, ParserConfigurationException, TransformerException {
+	List<String> queryTerms = new ArrayList<String>();
+//	queryTerms.add("Sfeer rond kerstmis, paasfeest nadert al");
+//  queryTerms.add("Een imitatie van Charlie Chaplin");
+//  queryTerms.add("Marbles by Daan Roosegaarde");
+//  queryTerms.add("Slipjacht door duinen en langs het strand");
+//  queryTerms.add("Mucki op verboden wegen");
+//  queryTerms.add("Internationaal vliegfeest");
+//  queryTerms.add("Inspectie politietroepen");
+//  queryTerms.add("De angst lag als een deksel over Amsterdam");
+//  queryTerms.add("Race fly trash");
+//  queryTerms.add("Arabian gun twirler");
+//  queryTerms.add("Het grootste klokhuis van ons land");
+//  queryTerms.add("Eindhoven  de intocht van St. Nicolaas");
+//  queryTerms.add("Pontificale rouwdienst voor paus Pius XII");
+//  queryTerms.add("De kermisschool doorkruist weer het land");
+//  queryTerms.add("Viering van het 30-jarig bestaan van het Nijmeegse studentencorps");
+//  queryTerms.add("De wilde eend 07 25");
+//  queryTerms.add("MacBeth 14 33");
+//  queryTerms.add("Fra cervello e movimento: Rosso 6 7");
+//  queryTerms.add("Hobby van een luchtmiljonair");
+//  queryTerms.add("Op wie stemt u ");   
+  
+//	  queryTerms.add("1 december 1967");
+//	  queryTerms.add("29 januari 1934");
+//	  queryTerms.add("12 juli 2013");
+//	  queryTerms.add("1 januari 1974");
+//	  queryTerms.add("1 januari 1920");
+//	  queryTerms.add("1 juni 1968");
+//	  queryTerms.add("25 juli 1931");
+//	  queryTerms.add("19 februari 2010");
+//	  queryTerms.add("1 oktober 2000");
+//	  queryTerms.add("20 maart 1899");
+//	  queryTerms.add("31 januari 1961");
+//	  queryTerms.add("1 november 1941");
+//	  queryTerms.add("15 oktober 1958");
+//	  queryTerms.add("11 april 1958");
+//	  queryTerms.add("14 mei 1954");
+//	  queryTerms.add("28 februari 2003");
+//	  queryTerms.add("27 april 2001");
+//	  queryTerms.add("18 december 1997");
+//	  queryTerms.add("1 juli 1951");
+//	  queryTerms.add("29 juni 1948");   
+
+  queryTerms.add("Polygoon-Profilti (producent)   Nederlands Instituut voor Beeld en Geluid (beheerder)");
+  queryTerms.add("studioroosegaarde");
+  queryTerms.add("Unknown (director)   Unknown (producer)");
+  queryTerms.add("Nationaal Comité 4 en 5 mei");
+  queryTerms.add("Keller, Paul");
+  queryTerms.add("Edison Manufacturing Co.");
+  queryTerms.add("Toneelgroep Amsterdam, Gerardjan Rijnders (regie)   Erik Lint (video)");
+  queryTerms.add("ICK Amsterdam, Emio Greco   PC (regie en concept)   Erik Lint (video)");
+
+  List<String> nodes = getAllNodes();
+
+  for (int i = 0; i < queryTerms.size(); i++) {
+      ArrayList<String> temp = getTitles("D:/workspace/YouTubeAPI/Dataset/Dataset producer/" + queryTerms.get(i) + " top 50.txt");
+      
+      System.out.println("Related videos of: " + queryTerms.get(i));
+      
+      for (int j = 0; j < temp.size(); j++) {
+    	  String s = temp.get(j);
+    	  if (nodes.indexOf(s) != -1) {
+    		  System.out.println(nodes.get(nodes.indexOf(s)));
+    	  }
+      }
+  }
+}
+
+private static void getRelatedVideoStatistics() throws XPathExpressionException, SAXException, IOException, ParserConfigurationException, TransformerException {
+	List<String> queryTerms = new ArrayList<String>();
+//	  queryTerms.add("Eindhoven de intocht van St. Nicolaas");
+//	  queryTerms.add("Op wie stemt u"); 
+//	queryTerms.add("Een imitatie van Charlie Chaplin");
+//  queryTerms.add("Marbles by Daan Roosegaarde");
+//  queryTerms.add("Internationaal vliegfeest");
+//  queryTerms.add("Race fly trash");
+//  queryTerms.add("Arabian gun twirler");
+//  queryTerms.add("Het grootste klokhuis van ons land");
+//  queryTerms.add("Pontificale rouwdienst voor paus Pius XII");
+//  queryTerms.add("Viering van het 30-jarig bestaan van het Nijmeegse studentencorps");
+//  queryTerms.add("MacBeth 14 33");
+//  queryTerms.add("Hobby van een luchtmiljonair");
+  
+//	  queryTerms.add("1 december 1967");
+//	  queryTerms.add("29 januari 1934");
+//	  queryTerms.add("12 juli 2013");
+//	  queryTerms.add("1 januari 1974");
+//	  queryTerms.add("1 januari 1920");
+//	  queryTerms.add("1 juni 1968");
+//	  queryTerms.add("25 juli 1931");
+//	  queryTerms.add("19 februari 2010");
+//	  queryTerms.add("1 oktober 2000");
+//	  queryTerms.add("20 maart 1899");
+//	  queryTerms.add("31 januari 1961");
+//	  queryTerms.add("1 november 1941");
+//	  queryTerms.add("15 oktober 1958");
+//	  queryTerms.add("11 april 1958");
+//	  queryTerms.add("14 mei 1954");
+//	  queryTerms.add("28 februari 2003");
+//	  queryTerms.add("27 april 2001");
+//	  queryTerms.add("18 december 1997");
+//	  queryTerms.add("1 juli 1951");
+//	  queryTerms.add("29 juni 1948");   
+
+  queryTerms.add("Polygoon-Profilti (producent)   Nederlands Instituut voor Beeld en Geluid (beheerder)");
+//  queryTerms.add("studioroosegaarde");
+  //queryTerms.add("Unknown (director) Unknown (producer)");
+//  queryTerms.add("Nationaal Comité 4 en 5 mei");
+//  queryTerms.add("Keller, Paul");
+//  queryTerms.add("Edison Manufacturing Co.");
+  //queryTerms.add("Toneelgroep Amsterdam, Gerardjan Rijnders (regie)   Erik Lint (video)");
+  //queryTerms.add("ICK Amsterdam, Emio Greco   PC (regie en concept)   Erik Lint (video)");
+
+	for (int a = 0; a < queryTerms.size(); a++) {
+	ArrayList<String> indices = getIndices("D:/workspace/YouTubeAPI/Dataset/Dataset producer/" + queryTerms.get(a) + " top 50.txt");
+	
+  List<String> nodes = getAllNodes();
+
+  for (int i = 0; i < indices.size(); i++) {
+      ArrayList<String> temp = getTitles("D:/workspace/YouTubeAPI/Dataset/Dataset producer/Polygoon related videos/Dataset producer " + queryTerms.get(a) + "related videos " + indices.get(i) + " top 50.txt");
+      
+      System.out.println("Related videos of: " + queryTerms.get(a) + "/" + indices.get(i));
+      
+      for (int j = 0; j < temp.size(); j++) {
+    	  String s = temp.get(j);
+    	  if (nodes.indexOf(s) != -1) {
+    		  System.out.println(nodes.get(nodes.indexOf(s)));
+    	  }
+      }
+  }
+  }
+}
+
+private static void retrieveRelatedVideofiles() throws IOException {
+	List<String> queryTerms = new ArrayList<String>();
+//	queryTerms.add("Sfeer rond kerstmis, paasfeest nadert al");
+//  queryTerms.add("Een imitatie van Charlie Chaplin");
+//  queryTerms.add("Marbles by Daan Roosegaarde");
+//  queryTerms.add("Slipjacht door duinen en langs het strand");
+//  queryTerms.add("Mucki op verboden wegen");
+//  queryTerms.add("Internationaal vliegfeest");
+//  queryTerms.add("Inspectie politietroepen");
+//  queryTerms.add("De angst lag als een deksel over Amsterdam");
+//  queryTerms.add("Race fly trash");
+//  queryTerms.add("Arabian gun twirler");
+//  queryTerms.add("Het grootste klokhuis van ons land");
+//  queryTerms.add("Eindhoven  de intocht van St. Nicolaas");
+//  queryTerms.add("Pontificale rouwdienst voor paus Pius XII");
+//  queryTerms.add("De kermisschool doorkruist weer het land");
+//  queryTerms.add("Viering van het 30-jarig bestaan van het Nijmeegse studentencorps");
+//  queryTerms.add("De wilde eend 07 25");
+//  queryTerms.add("MacBeth 14 33");
+//  queryTerms.add("Fra cervello e movimento: Rosso 6 7");
+//  queryTerms.add("Hobby van een luchtmiljonair");
+//  queryTerms.add("Op wie stemt u ");   
+
+//	  queryTerms.add("1 december 1967");
+//	  queryTerms.add("29 januari 1934");
+//	  queryTerms.add("12 juli 2013");
+//	  queryTerms.add("1 januari 1974");
+//	  queryTerms.add("1 januari 1920");
+//	  queryTerms.add("1 juni 1968");
+//	  queryTerms.add("25 juli 1931");
+//	  queryTerms.add("19 februari 2010");
+//	  queryTerms.add("1 oktober 2000");
+//	  queryTerms.add("20 maart 1899");
+//	  queryTerms.add("31 januari 1961");
+//	  queryTerms.add("1 november 1941");
+//	  queryTerms.add("15 oktober 1958");
+//	  queryTerms.add("11 april 1958");
+//	  queryTerms.add("14 mei 1954");
+//	  queryTerms.add("28 februari 2003");
+//	  queryTerms.add("27 april 2001");
+//	  queryTerms.add("18 december 1997");
+//	  queryTerms.add("1 juli 1951");
+//	  queryTerms.add("29 juni 1948");   
+
+  queryTerms.add("Polygoon-Profilti (producent)   Nederlands Instituut voor Beeld en Geluid (beheerder)");
+  queryTerms.add("studioroosegaarde");
+  queryTerms.add("Unknown (director)   Unknown (producer)");
+  queryTerms.add("Nationaal Comité 4 en 5 mei");
+  queryTerms.add("Keller, Paul");
+  queryTerms.add("Edison Manufacturing Co.");
+  queryTerms.add("Toneelgroep Amsterdam, Gerardjan Rijnders (regie)   Erik Lint (video)");
+  queryTerms.add("ICK Amsterdam, Emio Greco   PC (regie en concept)   Erik Lint (video)");
+
+  for (int i = 0; i < queryTerms.size(); i++) {
+		ArrayList<String> temp = getIndices("D:/workspace/YouTubeAPI/Dataset/Dataset producer/" + queryTerms.get(i) + " top 50.txt");
+	    
+	    for (int j = 0; j < temp.size(); j++) {
+	  	  List<SearchResult> result = getRelatedVideos(temp.get(j), 50L);
+	  	  writeToFile(result.iterator(), "Dataset producer/" + queryTerms.get(i) + "related videos/" + temp.get(j));
+	    }
+  }
+}
+
 private static void retrieveDatafiles() throws IOException {
 	// List all videoId's for which to find the related videos
 	List<String> queryTerms = new ArrayList<String>();
-    queryTerms.add("Kerstmis paasfeest chocola paasei beeld geluid");
-    queryTerms.add("Imitat Charlie Chaplin");
-    queryTerms.add("Reportage Marbles Daan Roosegaarde Almere");
-    queryTerms.add("Drag hunt horse dog");
-    queryTerms.add("monkey eat wheat cute");
-    queryTerms.add("Airshow Seppe");
-    queryTerms.add("chief police class inspection");
-    queryTerms.add("februaristaking amsterdam");
-    queryTerms.add("Extreme bike sports Amsterdam 2000");
-    queryTerms.add("Arabian gun twirler");
-        
+//    queryTerms.add("Sfeer rond kerstmis, paasfeest nadert al");
+//    queryTerms.add("Een imitatie van Charlie Chaplin");
+//    queryTerms.add("Marbles by Daan Roosegaarde");
+//    queryTerms.add("Slipjacht door duinen en langs het strand");
+//    queryTerms.add("Mucki op verboden wegen");
+//    queryTerms.add("Internationaal vliegfeest");
+//    queryTerms.add("Inspectie politietroepen");
+//    queryTerms.add("De angst lag als een deksel over Amsterdam");
+//    queryTerms.add("Race fly trash");
+//    queryTerms.add("Arabian gun twirler");
+//    queryTerms.add("Het grootste klokhuis van ons land");
+//    queryTerms.add("Eindhoven: de intocht van St. Nicolaas");
+//    queryTerms.add("Pontificale rouwdienst voor paus Pius XII");
+//    queryTerms.add("De kermisschool doorkruist weer het land");
+//    queryTerms.add("Viering van het 30-jarig bestaan van het Nijmeegse studentencorps");
+//    queryTerms.add("De wilde eend 07/25");
+//    queryTerms.add("MacBeth 14/33");
+//    queryTerms.add("Fra cervello e movimento: Rosso 6/7");
+//    queryTerms.add("Hobby van een luchtmiljonair");
+//    queryTerms.add("Op wie stemt u?");   
+    
+//    queryTerms.add("Polygoon-Profilti (producent) / Nederlands Instituut voor Beeld en Geluid (beheerder)");
+//    queryTerms.add("studioroosegaarde");
+//    queryTerms.add("Unknown (director) / Unknown (producer)");
+//    queryTerms.add("Nationaal Comité 4 en 5 mei");
+//    queryTerms.add("Keller, Paul");
+//    queryTerms.add("Edison Manufacturing Co.");
+//    queryTerms.add("Toneelgroep Amsterdam, Gerardjan Rijnders (regie) / Erik Lint (video)");
+//    queryTerms.add("ICK Amsterdam, Emio Greco | PC (regie en concept) / Erik Lint (video)");
+
+  queryTerms.add("1 december 1967");
+  queryTerms.add("29 januari 1934");
+  queryTerms.add("12 juli 2013");
+  queryTerms.add("1 januari 1974");
+  queryTerms.add("1 januari 1920");
+  queryTerms.add("1 juni 1968");
+  queryTerms.add("25 juli 1931");
+  queryTerms.add("19 februari 2010");
+  queryTerms.add("1 oktober 2000");
+  queryTerms.add("20 maart 1899");
+  queryTerms.add("31 januari 1961");
+  queryTerms.add("1 november 1941");
+  queryTerms.add("15 oktober 1958");
+  queryTerms.add("11 april 1958");
+  queryTerms.add("14 mei 1954");
+  queryTerms.add("28 februari 2003");
+  queryTerms.add("27 april 2001");
+  queryTerms.add("18 december 1997");
+  queryTerms.add("1 juli 1951");
+  queryTerms.add("29 juni 1948");   
+
     for (int i = 0; i < queryTerms.size(); i++) {
   	  	// Get videoId
   	  	String queryTerm = queryTerms.get(i);
@@ -387,6 +683,11 @@ private static void retrieveDatafiles() throws IOException {
 
 private static void writeToFile(Iterator<SearchResult> iteratorSearchResults,
 		String query) throws IOException {
+	
+	query = query.replace('/', ' ');
+	query = query.replace(':', ' ');
+	query = query.replace('?', ' ');
+	query = query.replace('|', ' ');
 	
 	PrintWriter writer = new PrintWriter("Dataset/" + query + " top " + NUMBER_OF_VIDEOS_RETURNED + ".txt", "UTF-8");
 	
@@ -650,6 +951,7 @@ private static void prettyPrint(Iterator<SearchResult> iteratorSearchResults,
     while (iteratorSearchResults.hasNext()) {
 
         SearchResult singleVideo = iteratorSearchResults.next();
+        Video v = new Video();
         ResourceId rId = singleVideo.getId();        
 
         // Confirm that the result represents a video. Otherwise, the
@@ -664,27 +966,27 @@ private static void prettyPrint(Iterator<SearchResult> iteratorSearchResults,
         }
     }
     
-	YouTube.Videos.List list = authorized.videos().list("id, snippet, statistics");
-	videoIds = videoIds.substring(0, videoIds.length()-1);
-	list.setId(videoIds);
-	VideoListResponse response = list.execute();
-	List<Video> videos = response.getItems();
-	BigInteger champion = new BigInteger("0");
-	String video = "";
-	for (int i = 0; i < videos.size(); i++) {
-		Video vid = videos.get(i);
-		BigInteger views = vid.getStatistics().getViewCount();
-		System.out.println(vid.getSnippet().getTitle());
-		System.out.println(vid.getId());
-		System.out.println(views);
-		System.out.println(vid.getSnippet().getPublishedAt());
-		if (views.compareTo(champion) > 0) {
-			champion = views;
-			video = vid.getSnippet().getTitle();
-		}
-	}
-	System.out.println(champion);
-	System.out.println(video);
+//	YouTube.Videos.List list = authorized.videos().list("id, snippet, statistics");
+//	videoIds = videoIds.substring(0, videoIds.length()-1);
+//	list.setId(videoIds);
+//	VideoListResponse response = list.execute();
+//	List<Video> videos = response.getItems();
+//	BigInteger champion = new BigInteger("0");
+//	String video = "";
+//	for (int i = 0; i < videos.size(); i++) {
+//		Video vid = videos.get(i);
+//		BigInteger views = vid.getStatistics().getViewCount();
+//		System.out.println(vid.getSnippet().getTitle());
+//		System.out.println(vid.getId());
+//		System.out.println(views);
+//		System.out.println(vid.getSnippet().getPublishedAt());
+//		if (views.compareTo(champion) > 0) {
+//			champion = views;
+//			video = vid.getSnippet().getTitle();
+//		}
+//	}
+//	System.out.println(champion);
+//	System.out.println(video);
   }
 
   private static String getInputQuery() throws IOException {
@@ -701,6 +1003,57 @@ private static void prettyPrint(Iterator<SearchResult> iteratorSearchResults,
 	
 	return inputQuery;
   }
+  
+	private static Document getMetadata() throws SAXException, IOException,
+	ParserConfigurationException, TransformerException,
+	XPathExpressionException {
+		DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+		DocumentBuilder builder = factory.newDocumentBuilder();
+		Document document = builder.parse(new FileInputStream("D:/Dropbox/Public/Master Thesis/Dataset/dataset.xml"));
+
+		return document;
+	}
+	
+	private static List<String> getNodes(Document document, String expression)
+			throws XPathExpressionException {
+		ArrayList<String> result = new ArrayList<String>();
+			NodeList nodeList = (NodeList) xPath.compile(expression).evaluate(document,
+					XPathConstants.NODESET);
+			for (int i = 0; i < nodeList.getLength(); i++) {
+				if (nodeList.item(i).getFirstChild() != null){
+					result.add(nodeList.item(i).getFirstChild().getNodeValue());
+				}
+				else {
+					result.add("null");
+				}
+			}
+
+		return result;
+	}
+	
+	private static List<String> getAllNodes() throws XPathExpressionException, SAXException, IOException, ParserConfigurationException, TransformerException {
+		List<String> result = new ArrayList<String>();
+		result.addAll(getNodes(getMetadata(), "OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:title'][@lang='nl']"));
+		result.addAll(getNodes(getMetadata(), "OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:alternative'][@lang='nl']"));
+		result.addAll(getNodes(getMetadata(), "OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:creator'][@lang='nl']"));
+		result.addAll(getNodes(getMetadata(), "OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:subject'][@lang='nl']"));
+		result.addAll(getNodes(getMetadata(), "OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:description'][@lang='nl']"));
+		result.addAll(getNodes(getMetadata(), "OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:abstract'][@lang='nl']"));
+		result.addAll(getNodes(getMetadata(), "OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:publisher'][@lang='nl']"));
+		result.addAll(getNodes(getMetadata(), "OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:contributor']"));
+		result.addAll(getNodes(getMetadata(), "OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:date']"));
+		result.addAll(getNodes(getMetadata(), "OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:type']"));
+		result.addAll(getNodes(getMetadata(), "OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:extent']"));
+		result.addAll(getNodes(getMetadata(), "OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:medium']"));
+		result.addAll(getNodes(getMetadata(), "OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:identifier']"));
+		result.addAll(getNodes(getMetadata(), "OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:language']"));
+		result.addAll(getNodes(getMetadata(), "OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:references'][@lang='nl']"));
+		result.addAll(getNodes(getMetadata(), "OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:spatial'][@lang='nl']"));
+		result.addAll(getNodes(getMetadata(), "OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:attributionName'][@lang='nl']"));
+		result.addAll(getNodes(getMetadata(), "OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:attributionURL']"));
+		result.addAll(getNodes(getMetadata(), "OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:license']"));
+		return result;	
+	}
 }
 
   class ValueComparator implements Comparator<String> {

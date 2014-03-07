@@ -71,6 +71,11 @@
       <artifactId>google-oauth-client-jetty</artifactId>
       <version>${project.oauth.version}</version>
     </dependency>
+    <dependency>
+    	<groupId>org.codehaus.jackson</groupId>
+    	<artifactId>jackson-mapper-asl</artifactId>
+    	<version>1.9.4</version>
+    </dependency>
   </dependencies>
   <properties>
     <project.http.version>1.17.0-rc</project.http.version>
