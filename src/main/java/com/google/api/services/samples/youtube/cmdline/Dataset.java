@@ -23,6 +23,12 @@ public class Dataset {
 	private static XPath xPath = XPathFactory.newInstance().newXPath();
 	private static Document document;
 	
+	public static void main(String[] args) {
+		//Dataset dataset = new Dataset();
+		//dataset.getUniqueMedium();
+		System.out.println("Hoi");
+	}
+	
 	public Dataset() throws XPathExpressionException, SAXException, IOException, ParserConfigurationException, TransformerException {
 		loadDataset();
 	}
@@ -47,6 +53,25 @@ public class Dataset {
 
 		return result;
 	}
+	
+//	public List<String> getUniqueMedium() throws XPathExpressionException {
+//		ArrayList<String> result = new ArrayList<String>();
+//		NodeList nodeList = (NodeList) xPath.compile("OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']").evaluate(document, XPathConstants.NODESET);
+//		System.out.println(nodeList.item(0).getChildNodes().item(1).getNodeName());
+//		System.out.println(nodeList.item(0).getNodeValue());
+//
+//			for (int i = 0; i < nodeList.getLength(); i++) {
+//				System.out.println(nodeList.item(i).getFirstChild());
+//				if (nodeList.item(i).getFirstChild() != null){
+//					result.add(nodeList.item(i).getFirstChild().getNodeValue());
+//				}
+//				else {
+//					result.add("null");
+//				}
+//			}
+//
+//		return result;
+//	}
 
 	public List<String> getDataset() throws XPathExpressionException, SAXException, IOException, ParserConfigurationException, TransformerException {		
 		List<String> result = new ArrayList<String>();
@@ -105,27 +130,27 @@ public class Dataset {
 	}
 
 	public List<String> getDates() throws XPathExpressionException {
-		return getNodes(document, "OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:date'][@lang='nl']");
+		return getNodes(document, "OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:date']");
 	}
 
 	public List<String> getTypes() throws XPathExpressionException {
-		return getNodes(document, "OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:type'][@lang='nl']");
+		return getNodes(document, "OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:type']");
 	}
 
 	public List<String> getExtents() throws XPathExpressionException {
-		return getNodes(document, "OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:extent'][@lang='nl']");
+		return getNodes(document, "OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:extent']");
 	}
 
 	public List<String> getMediums() throws XPathExpressionException {
-		return getNodes(document, "OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:medium'][@lang='nl']");
+		return getNodes(document, "OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:medium'][@format='intermediate']");
 	}
 
 	public List<String> getIdentifiers() throws XPathExpressionException {
-		return getNodes(document, "OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:identifier'][@lang='nl']");
+		return getNodes(document, "OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:identifier']");
 	}
 
 	public List<String> getLanguages() throws XPathExpressionException {
-		return getNodes(document, "OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:language'][@lang='nl']");
+		return getNodes(document, "OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:language']");
 	}
 
 	public List<String> getReferences() throws XPathExpressionException {
@@ -141,10 +166,10 @@ public class Dataset {
 	}
 
 	public List<String> getAttributionURLs() throws XPathExpressionException {
-		return getNodes(document, "OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:attributionURL'][@lang='nl']");
+		return getNodes(document, "OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:attributionURL']");
 	}
 
 	public List<String> getLicenses() throws XPathExpressionException {
-		return getNodes(document, "OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:license'][@lang='nl']");
+		return getNodes(document, "OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:license']");
 	}
 }

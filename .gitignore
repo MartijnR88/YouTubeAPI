@@ -6,3 +6,4 @@ target/classes/client_secrets.json
 target/classes/com/google/api/services/samples/youtube/cmdline/YouTubeSample$1.class
 target/classes/com/google/api/services/samples/youtube/cmdline/YouTubeSample.class
 Backup/
+target/
