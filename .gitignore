@@ -7,3 +7,8 @@ target/classes/com/google/api/services/samples/youtube/cmdline/YouTubeSample$1.c
 target/classes/com/google/api/services/samples/youtube/cmdline/YouTubeSample.class
 Backup/
 target/
+Dataset titles/
+Dataset dates/
+Dataset publisher/
+Old datasets/
+dataset.json

@@ -22,50 +22,98 @@ import com.google.api.services.youtube.model.SearchResult;
 public class Statistics {
 	private static List<String> queryTerms;
 	
-	public Statistics() throws XPathExpressionException, SAXException, IOException, ParserConfigurationException, TransformerException {
-		queryTerms = new ArrayList<String>();
-		queryTerms.add("Eindhoven de intocht van St. Nicolaas");
-		queryTerms.add("Op wie stemt u"); 
-		queryTerms.add("Een imitatie van Charlie Chaplin");
-		queryTerms.add("Marbles by Daan Roosegaarde");
-		queryTerms.add("Internationaal vliegfeest");
-		queryTerms.add("Race fly trash");
-		queryTerms.add("Arabian gun twirler");
-		queryTerms.add("Het grootste klokhuis van ons land");
-		queryTerms.add("Pontificale rouwdienst voor paus Pius XII");
-		queryTerms.add("Viering van het 30-jarig bestaan van het Nijmeegse studentencorps");
-		queryTerms.add("MacBeth 14 33");
-		queryTerms.add("Hobby van een luchtmiljonair");
-	  
-		queryTerms.add("1 december 1967");
-		queryTerms.add("29 januari 1934");
-		queryTerms.add("12 juli 2013");
-		queryTerms.add("1 januari 1974");
-		queryTerms.add("1 januari 1920");
-		queryTerms.add("1 juni 1968");
-		queryTerms.add("25 juli 1931");
-		queryTerms.add("19 februari 2010");
-		queryTerms.add("1 oktober 2000");
-		queryTerms.add("20 maart 1899");
-		queryTerms.add("31 januari 1961");
-		queryTerms.add("1 november 1941");
-		queryTerms.add("15 oktober 1958");
-		queryTerms.add("11 april 1958");
-		queryTerms.add("14 mei 1954");
-		queryTerms.add("28 februari 2003");
-		queryTerms.add("27 april 2001");
-		queryTerms.add("18 december 1997");
-		queryTerms.add("1 juli 1951");
-		queryTerms.add("29 juni 1948");   
+	public static void main(String[] args) throws XPathExpressionException, SAXException, IOException, ParserConfigurationException, TransformerException {
+		Dataset dataset = new Dataset();
+		List<String> titles = dataset.getTitles();
+		List<Integer> numberOfSearchResults = new ArrayList<Integer>();
+		List<Integer> numberOfRelatedVideos = new ArrayList<Integer>();
+		List<Integer> percentages = new ArrayList<Integer>();
+		for (String title : titles) {
+			List<List<String>> result = new ArrayList<List<String>>();
+	    	title = correctPath(title);
+			List<String> indices = getMetadata("Dataset titles/" + title + ".txt", "Video Id: ");
+			numberOfSearchResults.add(indices.size());
+			for (String index : indices) {
+				index = correctPath(index);
+				List<String> metadata = getMetadata("Dataset titles/" + title + "/" + index + ".txt", "Video Id: ");
+				numberOfRelatedVideos.add(metadata.size());
+				result.add(metadata);
+			}
+			
+			TreeMap<String, Integer> map = getSortedMap(result);
+			percentages.add(getStatistics(map));
+		}
+		
+		Iterator<Integer> iterator = numberOfSearchResults.iterator();
+		int count = 0;
+		while (iterator.hasNext()){
+			int next = (Integer) iterator.next();
+			if (next == 0) {
+				count++;
+			}
+		}
+		
+		System.out.println("Total titles:" + numberOfSearchResults.size());
+		System.out.println("Total number of titles giving no result:" + count);
+		System.out.println("Mean number of search results" + mean(numberOfSearchResults));
+		System.out.println("St dev number of search results" + stdev(numberOfSearchResults));
+		
+		System.out.println("Mean percentages" + mean(percentages));
+		System.out.println("St dev percentages" + stdev(percentages));
+	}
+	
+	private static String correctPath(String path) {
+		  path = path.replace('#', ' ');
+		  path = path.replace('%', ' ');
+		  path = path.replace('&', ' ');
+		  path = path.replace('{', ' ');
+		  path = path.replace('}', ' ');
+		  path = path.replace('\"', ' ');
+		  path = path.replace('<', ' ');
+		  path = path.replace('>', ' ');
+		  path = path.replace('*', ' ');
+		  path = path.replace('?', ' ');
+		  path = path.replace('/', ' ');
+		  path = path.replace('$', ' ');
+		  path = path.replace('!', ' ');
+		  path = path.replace('\'', ' ');
+		  path = path.replace('\"', ' ');
+		  path = path.replace(':', ' ');
+		  path = path.replace('@', ' ');
+		  path = path.replace('+', ' ');
+		  path = path.replace('`', ' ');
+		  path = path.replace('|', ' ');
+		  path = path.replace('=', ' ');
+		  path = path.replaceAll("\\s+","");
 
-		queryTerms.add("Polygoon-Profilti (producent)   Nederlands Instituut voor Beeld en Geluid (beheerder)");
-		queryTerms.add("studioroosegaarde");
-		queryTerms.add("Unknown (director) Unknown (producer)");
-		queryTerms.add("Nationaal Comité 4 en 5 mei");
-		queryTerms.add("Keller, Paul");
-		queryTerms.add("Edison Manufacturing Co.");
-		queryTerms.add("Toneelgroep Amsterdam, Gerardjan Rijnders (regie)   Erik Lint (video)");
-		queryTerms.add("ICK Amsterdam, Emio Greco   PC (regie en concept)   Erik Lint (video)");
+		  return path;
+	}
+	
+	private static float stdev(List<Integer> uniques) {
+	    float mean = mean(uniques);  
+		
+		float variance_temp = 0;
+	    for (int unique : uniques) {
+	    	variance_temp += (mean - unique) * (mean - unique);
+	    }
+	    float variance = variance_temp / (float) uniques.size();
+	    float stdev = (float) Math.sqrt(variance);
+	    
+	    return stdev;
+	}
+
+	private static float mean(List<Integer> uniques) {
+	    int sum = 0;
+		for (int unique : uniques) {
+	    	sum += unique;
+	    }
+		
+		float mean = sum / (float) uniques.size();
+	    
+	    return mean;
+	}
+
+	public Statistics() throws XPathExpressionException, SAXException, IOException, ParserConfigurationException, TransformerException {
 	}
 	
 	public static ArrayList<String> getMetadata(String filename, String metadata) throws IOException {
@@ -89,32 +137,15 @@ public class Statistics {
 		}
 		return result;
 	}  
-
-	public void getStatistics(String path) throws XPathExpressionException, SAXException, IOException, ParserConfigurationException, TransformerException {
-		Dataset dataset = new Dataset();
-		List<String> nodes = dataset.getDataset();
-
-		for (int i = 0; i < queryTerms.size(); i++) {
-			ArrayList<String> titles = getMetadata(path, " Title: ");
-	      	System.out.println("Related videos of: " + queryTerms.get(i));
-	      
-	      	for (int j = 0; j < titles.size(); j++) {
-	      		String title = titles.get(j);
-	      		if (nodes.indexOf(title) != -1) {
-	      			System.out.println(nodes.get(nodes.indexOf(title)));
-	      		}
-	      	}
-		}
-	}
-	
-	public void getStatistics(List<List<SearchResult>> result) {
+		
+	public static TreeMap<String, Integer> getSortedMap(List<List<String>> result) {
 		Map<String, Integer> resultmap = new HashMap<String, Integer>();
       
 	      for (int j = 0; j < result.size(); j++) {
-	    	  List<SearchResult> res = result.get(j);
+	    	  List<String> res = result.get(j);
 	    	  
 	    	  for (int k = 0; k < res.size(); k++) {
-	    		  String id = res.get(k).getId().getVideoId();
+	    		  String id = res.get(k);
 	    		  if (!(resultmap.containsKey(id))) {
 	    			  resultmap.put(id, 1);
 	    		  }
@@ -128,38 +159,40 @@ public class Statistics {
 	      TreeMap<String, Integer> sorted_map = new TreeMap<String, Integer>(comparator);
 	      sorted_map.putAll(resultmap);
 	      
-	      System.out.println("Total number of videos: " + sorted_map.size());
+	      System.out.println("Sorted map: " + sorted_map.toString());
 	      
+	      return sorted_map;      
+	}
+	
+	public static int getStatistics(TreeMap<String, Integer> sorted_map) {
 	      Iterator<Integer> iterator = sorted_map.values().iterator();
-	      int count = 0;
+	      int unique = 0;
+	      int multiple = 0;
 	      int sum = 0;
 	      while (iterator.hasNext()) {
 	    	  int res = iterator.next();
 	    	  
 	    	  sum += res;
 	    	  
-	    	  if (res != 1) {
-	    		  count++;
+	    	  if (res == 1) {
+	    		  unique++;
+	    	  }
+	    	  else {
+	    		  multiple++;
 	    	  }
 	      }
 	      
-	      System.out.println("Number of videos that occur in more related videos lists: " + count);
+	      System.out.println("Number of videos:" + sum);
+	      System.out.println("Number of unique videos: " + unique);
+	      System.out.println("Number of videos occurring in multiple related video lists: " + multiple);
 	      
-	      float mean = sum / (float) sorted_map.size();
-	      System.out.println("Sum: " + sum);
-	      System.out.println("Mean: " + mean);
+	      int result;
+	      if (!(sum == 0))
+	    	  result = unique/sum;
+	      else
+	    	  result = 0;
 	      
-	      float variance_temp = 0;
-	      Iterator<Integer> iterator2 = sorted_map.values().iterator();
-	      while (iterator2.hasNext()) {
-	    	  float value = iterator2.next();
-	    	  variance_temp += (mean - value) * (mean - value);
-	      }
-	            
-	      float variance = variance_temp / (float) sorted_map.size();      
-	      float stdev = (float) Math.sqrt(variance);
-	      System.out.println("St dev: " + stdev);
-	      System.out.println(sorted_map.toString());
+	      return result;
 	}
 }
 

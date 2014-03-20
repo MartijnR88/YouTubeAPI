@@ -55,7 +55,12 @@
     <finalName>${project.artifactId}-${project.version}</finalName>
   </build>
   <dependencies>
-    <dependency>
+  <dependency>
+	<groupId>com.google.code.gson</groupId>
+	<artifactId>gson</artifactId>
+	<version>2.2.4</version>
+</dependency>
+     <dependency>
       <groupId>com.google.apis</groupId>
       <artifactId>google-api-services-youtube</artifactId>
       <version>v3-rev92-1.17.0-rc</version>
