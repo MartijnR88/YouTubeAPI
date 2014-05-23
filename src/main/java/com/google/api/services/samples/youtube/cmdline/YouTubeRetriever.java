@@ -19,6 +19,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.math.BigInteger;
@@ -29,6 +30,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 
 import javax.xml.parsers.ParserConfigurationException;
@@ -60,13 +62,12 @@ import com.google.api.services.youtube.model.Video;
 import com.google.api.services.youtube.model.VideoListResponse;
 
 /**
- * Main class for the YouTube Data API command line sample. Demonstrates how to
- * make an authenticated API call using OAuth 2 helper classes.
+ * Main class for the YouTube Data API to retrieve YouTube videos.
  */
-public class YouTubeSample {
+public class YouTubeRetriever {
 
 	/**
-	 * Be sure to specify the name of your application. If the application name
+	 * Be sure to specify the name of the application. If the application name
 	 * is {@code null} or blank, the application will log a warning. Suggested
 	 * format is "MyCompany-ProductName/1.0".
 	 */
@@ -96,14 +97,25 @@ public class YouTubeSample {
 	/** Number of videos returned, maximum is 50 */
 	private static final long NUMBER_OF_VIDEOS_RETURNED = 50;
 
-	private static final String key = "AIzaSyAAQuVMA9K_bakrLGwFmTC_a4Foml6sv48";
+	/** Properties filename */
+	private static final String PROPERTIES_FILENAME = "youtube.properties";
+
+	/** Developer key */
+	private static String key;
+
+	/**
+	 * The strings used to describe the features that can be used for querying
+	 */
+	public static final String TITLE = "Title";
+	public static final String DATE = "Date";
+	public static final String PUBLISHER = "Publisher";
 
 	/** Authorizes the installed application to access user's protected data. */
 	private static Credential authorize() throws Exception {
 		// load client secrets
 		GoogleClientSecrets clientSecrets = GoogleClientSecrets.load(
 				JSON_FACTORY,
-				new InputStreamReader(YouTubeSample.class
+				new InputStreamReader(YouTubeRetriever.class
 						.getResourceAsStream("/client_secrets.json")));
 		if (clientSecrets.getDetails().getClientId().startsWith("Enter")
 				|| clientSecrets.getDetails().getClientSecret()
@@ -129,7 +141,6 @@ public class YouTubeSample {
 		Set<String> scopes = new HashSet<String>();
 		scopes.add(YouTubeScopes.YOUTUBE);
 		scopes.add(YouTubeScopes.YOUTUBE_READONLY);
-		scopes.add(YouTubeScopes.YOUTUBE_UPLOAD);
 		scopes.add(YouTubeScopes.YOUTUBEPARTNER);
 		scopes.add(YouTubeScopes.YOUTUBEPARTNER_CHANNEL_AUDIT);
 
@@ -168,38 +179,55 @@ public class YouTubeSample {
 						}).setApplicationName("youtube-cmdline-search-sample")
 						.build();
 
-				String feature = "Producer";// getInputQuery();
+				// loads the developer key
+				Properties properties = new Properties();
+				InputStream in = Topics.class.getResourceAsStream("/"
+						+ PROPERTIES_FILENAME);
+				properties.load(in);
+				key = properties.getProperty("youtube.apikey");
+
+				// Ask which feature to use to retrieve videos
+				String feature = "Publisher";//getInputQuery();
 				Dataset dataset = new Dataset();
 				List<String> queries = new ArrayList<String>();
 
-				if (feature.equals("Title")) {
+				if (feature.equals(TITLE)) {
 					queries = dataset.getTitles();
 				}
 
-				else if (feature.equals("Date")) {
+				else if (feature.equals(DATE)) {
 					queries = formatDates(dataset.getDates());
 				}
 
-				else if (feature.equals("Producer")) {
+				else if (feature.equals(PUBLISHER)) {
 					queries = dataset.getPublishers();
 				}
 
 				else {
-					System.out
-							.println("You can only choose between Title, Date or Producer");
+					System.out.println("You can only choose between " + TITLE
+							+ ", " + DATE + " or " + PUBLISHER);
 				}
 
 				if (!queries.isEmpty()) {
-					retrieveVideos(queries);
+					File file = new File("Dataset\\" + feature);
+					file.mkdirs();
+					//retrieveVideos(queries, file);
 
+					int count = 1;
 					for (String query : queries) {
+						System.out.println("Processing file " + count + " of 2544");
+						count++;
 						query = correctPath(query);
-						File dir = new File("Dataset\\" + query);
-						boolean dirCreated = dir.mkdirs();
-						System.out.println(dirCreated);
-						if (dirCreated)
-							retrieveRelatedVideos(getIndices(query + ".txt"),
-									dir);
+						File dir = new File("Dataset\\" + feature + "\\"
+								+ query);
+						// dir.mkdirs();
+						System.out.println(dir.mkdirs());
+						//retrieveRelatedVideos(getIndices("Dataset\\" + feature
+						//		+ "\\" + query + ".txt"), dir);
+						if (!getIndices("Dataset\\" + feature
+								+ "\\" + query + ".txt").isEmpty())
+						retrieveRelatedofRelatedVideos(getIndices("Dataset\\" + feature
+								+ "\\" + query + ".txt").get(0), dir);
 					}
 				}
 
@@ -213,7 +241,14 @@ public class YouTubeSample {
 		}
 	}
 
-	private static List<String> formatDates(List<String> dates) {
+	/**
+	 * Formats dates from yyyy-mm-dd to Day Month Year, where month is a String
+	 * instead of an Integer.
+	 * 
+	 * @param dates
+	 * @return to formated list of dates
+	 */
+	public static List<String> formatDates(List<String> dates) {
 		ArrayList<String> result = new ArrayList<String>();
 		for (String date : dates) {
 			String[] parts = date.split("-");
@@ -276,7 +311,14 @@ public class YouTubeSample {
 		return result;
 	}
 
-	private static String correctPath(String path) {
+	/**
+	 * Corrects the given path, so it will not try to write paths containing one
+	 * of the removed symbols
+	 * 
+	 * @param path
+	 * @return the corrected path
+	 */
+	public static String correctPath(String path) {
 		path = path.replace('#', ' ');
 		path = path.replace('%', ' ');
 		path = path.replace('&', ' ');
@@ -298,22 +340,27 @@ public class YouTubeSample {
 		path = path.replace('`', ' ');
 		path = path.replace('|', ' ');
 		path = path.replace('=', ' ');
+		// Removes all spaces
 		path = path.replaceAll("\\s+", "");
 
 		return path;
 	}
 
-	private static void retrieveVideos(List<String> queryTerms)
+	/**
+	 * Searches on YouTube using the queries in queryTerms
+	 * 
+	 * @param queryTerms
+	 * @throws IOException
+	 */
+	private static void retrieveVideos(List<String> queryTerms, File dir)
 			throws IOException {
-
 		int count = 0;
 
 		for (int i = 0; i < queryTerms.size(); i++) {
-			// Get videoId
 			String queryTerm = queryTerms.get(i);
 			System.out.println("Processing file " + i + " of "
 					+ queryTerms.size());
-			File file = new File(correctPath(queryTerm) + ".txt");
+			File file = new File(dir, correctPath(queryTerm) + ".txt");
 
 			if (file.exists()) {
 				count++;
@@ -330,14 +377,14 @@ public class YouTubeSample {
 				// Set properties
 				setParameters(queryTerm, search);
 
-				// Call the API and print response
+				// Call the API
 				SearchListResponse searchResponse = search.execute();
 				List<SearchResult> searchResultList = searchResponse.getItems();
 
 				if (searchResultList == null)
-					System.out.println("SEARCH RESULT IS NULL!!!!!!!!!");
+					System.out.println("Search result is NULL!");
 
-				// Write the response to CSV
+				// Write the response to txt
 				else if (searchResultList != null) {
 					writeToFile(searchResultList.iterator(), file, queryTerm);
 				}
@@ -346,6 +393,12 @@ public class YouTubeSample {
 		System.out.println("Total doubles: " + count);
 	}
 
+	/**
+	 * Sets the parameters used to retrieve videos from YouTube
+	 * 
+	 * @param queryTerm
+	 * @param search
+	 */
 	private static void setParameters(String queryTerm,
 			com.google.api.services.youtube.YouTube.Search.List search) {
 		// Set the developer key from the Google Cloud Console for
@@ -360,20 +413,59 @@ public class YouTubeSample {
 
 		// To increase efficiency, only retrieve the fields that the
 		// application uses.
-		search.setFields("items(etag, id/kind,id/videoId,snippet/title,snippet/publishedAt)");
+		search.setFields("items(etag, id/kind,id/videoId,snippet/title,snippet/description)");
 		search.setMaxResults(NUMBER_OF_VIDEOS_RETURNED);
 	}
 
+	/**
+	 * Retrieves the related videos of the videos given by the indices
+	 * 
+	 * @param indices
+	 * @param dir
+	 * @throws IOException
+	 */
 	private static void retrieveRelatedVideos(ArrayList<String> indices,
 			File dir) throws IOException {
 		for (int j = 0; j < indices.size(); j++) {
-			List<SearchResult> result = getRelatedVideos(indices.get(j),
-					NUMBER_OF_VIDEOS_RETURNED);
 			File file = new File(dir, indices.get(j) + ".txt");
-			writeToFile(result.iterator(), file, indices.get(j));
+			if (!file.exists()) {
+				System.out.println("New file created:" + file.toString());
+				List<SearchResult> result = getRelatedVideos(indices.get(j),
+						NUMBER_OF_VIDEOS_RETURNED);
+				writeToFile(result.iterator(), file, indices.get(j));
+			} else {
+				System.out.println("File exists");
+			}
 		}
 	}
+	
+	private static void retrieveRelatedofRelatedVideos(
+			String index, File dir) throws IOException {
+		File file = new File(dir, index + ".txt");
+		if (file.exists()) {
+			File file_temp = new File(dir, index);
+			file_temp.mkdirs();
+			ArrayList<String> indices = getIndices(file.getPath());
+			for (String ind : indices) {
+				File f = new File(dir, "\\" + index + "\\" + ind + ".txt");
+				if (!f.exists()) {
+					System.out.println("New file created:" + f.toString());
+					List<SearchResult> result = getRelatedVideos(ind, NUMBER_OF_VIDEOS_RETURNED);
+					writeToFile(result.iterator(), f, ind);
+				} else {
+					System.out.println("File exists");
+				}
+			}
+		}		
+	}
 
+	/**
+	 * Gets all the indices specified in the file
+	 * 
+	 * @param filename
+	 * @return
+	 * @throws IOException
+	 */
 	public static ArrayList<String> getIndices(String filename)
 			throws IOException {
 		ArrayList<String> result = new ArrayList<String>();
@@ -397,6 +489,15 @@ public class YouTubeSample {
 		return result;
 	}
 
+	/**
+	 * Sets up the environment in which to retrieve the related videos for a
+	 * specified video, returns the list of search results
+	 * 
+	 * @param index
+	 * @param videosReturned
+	 * @return
+	 * @throws IOException
+	 */
 	private static List<SearchResult> getRelatedVideos(String index,
 			Long videosReturned) throws IOException {
 		// Define the API request for retrieving search results
@@ -413,22 +514,24 @@ public class YouTubeSample {
 		search.setFields("items(etag, id/kind,id/videoId,snippet/title)");
 		search.setMaxResults(videosReturned);
 
-		// Call the API and print response
+		// Call the API
 		SearchListResponse searchResponse = search.execute();
 		List<SearchResult> searchResultList = searchResponse.getItems();
 
 		return searchResultList;
 	}
 
+	/**
+	 * Writes the search results to the specified file
+	 * 
+	 * @param iteratorSearchResults
+	 * @param path
+	 * @param query
+	 * @throws IOException
+	 */
 	private static void writeToFile(
 			Iterator<SearchResult> iteratorSearchResults, File path,
 			String query) throws IOException {
-		// path = path.getPath().replace('/', ' ');
-		// path = path.replace('?', ' ');
-		// path = path.replace('|', ' ');
-		// path = path.replace(':', ' ');
-		// path = path.replace('!', ' ');
-		//
 		PrintWriter writer = new PrintWriter(path, "UTF-8");
 
 		writer.println("\n=============================================================");
@@ -458,6 +561,12 @@ public class YouTubeSample {
 		writer.close();
 	}
 
+	/**
+	 * Ask the user which feature it wants to use to query YouTube
+	 * 
+	 * @return
+	 * @throws IOException
+	 */
 	private static String getInputQuery() throws IOException {
 		String inputQuery = "";
 
@@ -466,11 +575,16 @@ public class YouTubeSample {
 				System.in));
 		inputQuery = bReader.readLine();
 
-		// If there was no input query, use the dummy, to prevent errors
-
 		return inputQuery;
 	}
 
+	/**
+	 * This method prints the search results in a pretty format
+	 * 
+	 * @param iteratorSearchResults
+	 * @param query
+	 * @throws IOException
+	 */
 	private static void prettyPrint(
 			Iterator<SearchResult> iteratorSearchResults, String query)
 			throws IOException {
@@ -503,6 +617,12 @@ public class YouTubeSample {
 		}
 	}
 
+	/**
+	 * Prints statistics about videos
+	 * 
+	 * @param videoIds
+	 * @throws IOException
+	 */
 	private static void printVideoStatistics(String videoIds)
 			throws IOException {
 		YouTube.Videos.List list = authorized.videos().list(

@@ -76,7 +76,7 @@ public class Helper {
 		// load client secrets
 		GoogleClientSecrets clientSecrets = GoogleClientSecrets.load(
 				JSON_FACTORY,
-				new InputStreamReader(YouTubeSample.class
+				new InputStreamReader(YouTubeRetriever.class
 						.getResourceAsStream("/client_secrets.json")));
 		if (clientSecrets.getDetails().getClientId().startsWith("Enter")
 				|| clientSecrets.getDetails().getClientSecret()
@@ -149,7 +149,7 @@ public class Helper {
 		String feature = getInputQuery();
 
 		// Define the API request for retrieving search results.
-		YouTube.Search.List search = authorized.search().list("id,snippet");
+		YouTube.Search.List search = unauthorized.search().list("id,snippet");
 		
 		// Set your developer key from the Google Developers Console for
 		// non-authenticated requests. See:
@@ -208,7 +208,7 @@ public class Helper {
 
 			// Confirm that the result represents a video. Otherwise, the
 			// item will not contain a video ID.
-			if (rId.getKind().equals("youtube#video")) {
+			if (rId.getKind().equals("youtube#video") && singleVideo.getSnippet().getTitle().equals(query)) {
 				System.out.println(" Etag: " + singleVideo.getEtag());
 				System.out.println(" Video Id: " + rId.getVideoId());
 				System.out.println(" Title: "
