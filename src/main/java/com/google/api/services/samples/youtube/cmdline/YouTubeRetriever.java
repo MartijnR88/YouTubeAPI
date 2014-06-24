@@ -26,6 +26,7 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -36,6 +37,10 @@ import java.util.Set;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.TransformerException;
 import javax.xml.xpath.XPathExpressionException;
+
+import nl.wisdelft.martijn.Movie;
+import nl.wisdelft.martijn.Movie.Domain;
+import nl.wisdelft.martijn.RetrieveDomains;
 
 import org.xml.sax.SAXException;
 
@@ -107,8 +112,9 @@ public class YouTubeRetriever {
 	 * The strings used to describe the features that can be used for querying
 	 */
 	public static final String TITLE = "Title";
-	public static final String DATE = "Date";
-	public static final String PUBLISHER = "Publisher";
+	public static final String TITLE_DATE = "Title + date";
+	public static final String TITLE_DOMAIN = "Title + domain";
+	private static Map<String, Movie.Domain> domains;
 
 	/** Authorizes the installed application to access user's protected data. */
 	private static Credential authorize() throws Exception {
@@ -187,7 +193,7 @@ public class YouTubeRetriever {
 				key = properties.getProperty("youtube.apikey");
 
 				// Ask which feature to use to retrieve videos
-				String feature = "Publisher";//getInputQuery();
+				String feature = "Title + domain";// getInputQuery();
 				Dataset dataset = new Dataset();
 				List<String> queries = new ArrayList<String>();
 
@@ -195,39 +201,60 @@ public class YouTubeRetriever {
 					queries = dataset.getTitles();
 				}
 
-				else if (feature.equals(DATE)) {
-					queries = formatDates(dataset.getDates());
+				else if (feature.equals(TITLE_DATE)) {
+					List<String> titles = dataset.getTitles();
+					List<String> dates = formatDates(dataset.getDates());
+					List<String> result = new ArrayList<String>();
+					for (int i = 0; i < titles.size(); i++) {
+						String title = titles.get(i);
+						String date = dates.get(i);
+						result.add(title + " " + date);
+					}
+					queries = result;
 				}
 
-				else if (feature.equals(PUBLISHER)) {
-					queries = dataset.getPublishers();
+				else if (feature.equals(TITLE_DOMAIN)) {
+					List<String> titles = dataset.getTitles();
+					List<String> ids = dataset.getIdentifiers();
+					List<String> result = new ArrayList<String>();
+					domains = importDomains();
+					for (int i = 0; i < ids.size(); i++) {
+						Movie.Domain domain = getDomain(ids.get(i).replace("oai:openimages.eu:", ""));
+						if (!(domain == null)) {
+							String domain_string = translateDomain(domain);
+							result.add(titles.get(i) + " " + domain_string);
+						}
+					}
+					queries = result;
 				}
 
 				else {
 					System.out.println("You can only choose between " + TITLE
-							+ ", " + DATE + " or " + PUBLISHER);
+							+ ", " + TITLE_DATE + " or " + TITLE_DOMAIN);
 				}
 
 				if (!queries.isEmpty()) {
 					File file = new File("Dataset\\" + feature);
 					file.mkdirs();
-					//retrieveVideos(queries, file);
+					retrieveVideos(queries, file);
 
 					int count = 1;
 					for (String query : queries) {
-						System.out.println("Processing file " + count + " of 2544");
+						System.out.println("Processing file " + count
+								+ " of 2544");
 						count++;
 						query = correctPath(query);
 						File dir = new File("Dataset\\" + feature + "\\"
 								+ query);
 						// dir.mkdirs();
 						System.out.println(dir.mkdirs());
-						//retrieveRelatedVideos(getIndices("Dataset\\" + feature
-						//		+ "\\" + query + ".txt"), dir);
-						if (!getIndices("Dataset\\" + feature
-								+ "\\" + query + ".txt").isEmpty())
-						retrieveRelatedofRelatedVideos(getIndices("Dataset\\" + feature
-								+ "\\" + query + ".txt").get(0), dir);
+						retrieveRelatedVideos(getIndices("Dataset\\" + feature
+								+ "\\" + query + ".csv"), dir);
+						// if (!getIndices("Dataset\\" + feature
+						// + "\\" + query + ".txt").isEmpty())
+						// retrieveRelatedofRelatedVideos(getIndices("Dataset\\"
+						// + feature
+						// + "\\" + query + ".txt").get(0), dir);
 					}
 				}
 
@@ -239,6 +266,61 @@ public class YouTubeRetriever {
 				t.printStackTrace();
 			}
 		}
+	}
+
+	public static Movie.Domain getDomain(String id) {
+		return domains.get(id);
+	}
+
+	private static Map<String, Movie.Domain> importDomains() throws IOException {
+		Map<String, Movie.Domain> result = new HashMap<String, Movie.Domain>();
+		BufferedReader in = new BufferedReader(new FileReader("domains.csv"));
+		String line;
+		while ((line = in.readLine()) != null) {
+			String[] info = line.split(",");
+			Movie.Domain domain = null;
+			String id = info[0];
+			info[1] = info[1].replace("-", "");
+			if (info[1].contains("newsitem")) {
+				domain = Movie.Domain.NEWS;
+			} else if (info[1].contains("eventcoverage")) {
+				domain = Movie.Domain.EVENT_COVERAGE;
+			} else if (info[1].contains("documentaryreport")) {
+				domain = Movie.Domain.DOCUMENTARY;
+			} else if (info[1].contains("films")) {
+				domain = Movie.Domain.FILM;
+			} else if (info[1].contains("series")) {
+				domain = Movie.Domain.SERIES;
+			} else if (info[1].contains("videoblog")) {
+				domain = Movie.Domain.VIDEO_BLOG;
+			}
+			if(result.containsKey(id))
+				System.out.println(id);
+			
+			if (!(domain == null)) {
+				result.put(id, domain);
+			}
+		}
+		in.close();
+		System.out.println(result.size());
+		return result;
+	}
+
+	private static String translateDomain(Domain domain) {
+		String result = "";
+		if (domain.equals(Movie.Domain.DOCUMENTARY))
+			result = "documentaire";
+		else if (domain.equals(Movie.Domain.EVENT_COVERAGE))
+			result = "evenement";
+		else if (domain.equals(Movie.Domain.FILM))
+			result = "film";
+		else if (domain.equals(Movie.Domain.NEWS))
+			result = "nieuws";
+		else if (domain.equals(Movie.Domain.SERIES))
+			result = "serie";
+		else if (domain.equals(Movie.Domain.VIDEO_BLOG))
+			result = "video blog";
+		return result;
 	}
 
 	/**
@@ -264,34 +346,34 @@ public class YouTubeRetriever {
 			String monthString;
 			switch (month_int) {
 			case 1:
-				monthString = "January";
+				monthString = "Januari";
 				break;
 			case 2:
-				monthString = "February";
+				monthString = "Februari";
 				break;
 			case 3:
-				monthString = "March";
+				monthString = "Maart";
 				break;
 			case 4:
 				monthString = "April";
 				break;
 			case 5:
-				monthString = "May";
+				monthString = "Mei";
 				break;
 			case 6:
-				monthString = "June";
+				monthString = "Juni";
 				break;
 			case 7:
-				monthString = "July";
+				monthString = "Juli";
 				break;
 			case 8:
-				monthString = "August";
+				monthString = "Augustus";
 				break;
 			case 9:
 				monthString = "September";
 				break;
 			case 10:
-				monthString = "October";
+				monthString = "Oktober";
 				break;
 			case 11:
 				monthString = "November";
@@ -360,7 +442,7 @@ public class YouTubeRetriever {
 			String queryTerm = queryTerms.get(i);
 			System.out.println("Processing file " + i + " of "
 					+ queryTerms.size());
-			File file = new File(dir, correctPath(queryTerm) + ".txt");
+			File file = new File(dir, correctPath(queryTerm) + ".csv");
 
 			if (file.exists()) {
 				count++;
@@ -386,7 +468,7 @@ public class YouTubeRetriever {
 
 				// Write the response to txt
 				else if (searchResultList != null) {
-					writeToFile(searchResultList.iterator(), file, queryTerm);
+					writeToCSV(searchResultList.iterator(), file, queryTerm);
 				}
 			}
 		}
@@ -427,36 +509,37 @@ public class YouTubeRetriever {
 	private static void retrieveRelatedVideos(ArrayList<String> indices,
 			File dir) throws IOException {
 		for (int j = 0; j < indices.size(); j++) {
-			File file = new File(dir, indices.get(j) + ".txt");
+			File file = new File(dir, indices.get(j) + ".csv");
 			if (!file.exists()) {
 				System.out.println("New file created:" + file.toString());
 				List<SearchResult> result = getRelatedVideos(indices.get(j),
 						NUMBER_OF_VIDEOS_RETURNED);
-				writeToFile(result.iterator(), file, indices.get(j));
+				writeToCSV(result.iterator(), file, indices.get(j));
 			} else {
 				System.out.println("File exists");
 			}
 		}
 	}
-	
-	private static void retrieveRelatedofRelatedVideos(
-			String index, File dir) throws IOException {
-		File file = new File(dir, index + ".txt");
+
+	private static void retrieveRelatedofRelatedVideos(String index, File dir)
+			throws IOException {
+		File file = new File(dir, index + ".csv");
 		if (file.exists()) {
 			File file_temp = new File(dir, index);
 			file_temp.mkdirs();
 			ArrayList<String> indices = getIndices(file.getPath());
 			for (String ind : indices) {
-				File f = new File(dir, "\\" + index + "\\" + ind + ".txt");
+				File f = new File(dir, "\\" + index + "\\" + ind + ".csv");
 				if (!f.exists()) {
 					System.out.println("New file created:" + f.toString());
-					List<SearchResult> result = getRelatedVideos(ind, NUMBER_OF_VIDEOS_RETURNED);
-					writeToFile(result.iterator(), f, ind);
+					List<SearchResult> result = getRelatedVideos(ind,
+							NUMBER_OF_VIDEOS_RETURNED);
+					writeToCSV(result.iterator(), f, ind);
 				} else {
 					System.out.println("File exists");
 				}
 			}
-		}		
+		}
 	}
 
 	/**
@@ -473,14 +556,13 @@ public class YouTubeRetriever {
 		// Read text files
 		BufferedReader br = new BufferedReader(new FileReader(filename));
 		try {
-			String line = br.readLine();
+			String line = "";
 
-			while (line != null) {
-				if (line.contains("Video Id:")) {
-					// Only take the id, not the "Video Id: " part
-					result.add(line.substring(11));
+			while ((line = br.readLine()) != null) {
+				String[] results = line.split(",");
+				if (!results[1].contains("Video Id")) {
+					result.add(results[1]);
 				}
-				line = br.readLine();
 			}
 		} finally {
 			br.close();
@@ -511,7 +593,7 @@ public class YouTubeRetriever {
 		search.setType("video");
 		// To increase efficiency, only retrieve the fields that the
 		// application uses.
-		search.setFields("items(etag, id/kind,id/videoId,snippet/title)");
+		search.setFields("items(etag, id/kind,id/videoId,snippet/title,snippet/description)");
 		search.setMaxResults(videosReturned);
 
 		// Call the API
@@ -554,10 +636,58 @@ public class YouTubeRetriever {
 				writer.println(" Etag: " + singleVideo.getEtag());
 				writer.println(" Video Id: " + rId.getVideoId());
 				writer.println(" Title: " + singleVideo.getSnippet().getTitle());
+				writer.println(" Description: "
+						+ singleVideo.getSnippet().getDescription()
+								.replace("\n", "").replace("\r", ""));
 				writer.println("\n-------------------------------------------------------------\n");
 			}
 		}
 
+		writer.close();
+	}
+
+	private static void writeToCSV(
+			Iterator<SearchResult> iteratorSearchResults, File path,
+			String query) throws IOException {
+		boolean created = false;
+		File file = path;
+
+		// Create file if it doesn't exist
+		if (!file.exists()) {
+			file.createNewFile();
+			created = true;
+		}
+
+		FileWriter writer = new FileWriter(file, true);
+
+		if (created) {
+			// Add headers
+			writer.append("Etag, Video Id, Title, Description");
+			writer.append('\n');
+
+			// Add all rows:
+			if (!iteratorSearchResults.hasNext()) {
+				
+			}
+
+			while (iteratorSearchResults.hasNext()) {
+				SearchResult singleVideo = iteratorSearchResults.next();
+				ResourceId rId = singleVideo.getId();
+
+				// Confirm that the result represents a video. Otherwise, the
+				// item will not contain a video ID.
+				if (rId.getKind().equals("youtube#video")) {
+					String etag = singleVideo.getEtag().replace(",", ";");
+					String videoId = rId.getVideoId().replace(",", ";");
+					String title = singleVideo.getSnippet().getTitle().replace(",", ";");
+					String description = singleVideo.getSnippet().getDescription().replace("\n", "").replace("\r", "").replace(",", ";");
+					writer.append(etag + "," + videoId + "," + title + "," + description);
+					writer.append('\n');
+				}
+			}
+		}
+
+		writer.flush();
 		writer.close();
 	}
 
@@ -611,6 +741,8 @@ public class YouTubeRetriever {
 				System.out.println(" Video Id: " + rId.getVideoId());
 				System.out.println(" Title: "
 						+ singleVideo.getSnippet().getTitle());
+				System.out.println(" Description: "
+						+ singleVideo.getSnippet().getDescription());
 				System.out
 						.println("\n-------------------------------------------------------------\n");
 			}

@@ -1,6 +1,10 @@
 package com.google.api.services.samples.youtube.cmdline;
 
+import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -19,6 +23,7 @@ import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 
+import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
@@ -27,24 +32,28 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 /**
- * This class loads an external dataset. Every feature in the dataset can be retrieved using its corresponding method. 
+ * This class loads an external dataset. Every feature in the dataset can be
+ * retrieved using its corresponding method.
  * 
  * @author Martijn Rentmeester
- *
+ * 
  */
 public class Dataset {
-    private static final String PROPERTIES_FILENAME = "youtube.properties";
+	private static final String PROPERTIES_FILENAME = "youtube.properties";
 	private static String PATH;
 	private static XPath xPath = XPathFactory.newInstance().newXPath();
 	private static Document document;
-	
-	public static void main(String[] args) throws XPathExpressionException, SAXException, IOException, ParserConfigurationException, TransformerException {
+
+	public static void main(String[] args) throws XPathExpressionException,
+			SAXException, IOException, ParserConfigurationException,
+			TransformerException {
 		Dataset d = new Dataset();
 		d.toVideoIdJSON();
 	}
-	
+
 	/**
-	 * This methods loads the properties, sets the path to the dataset and finally loads the dataset
+	 * This methods loads the properties, sets the path to the dataset and
+	 * finally loads the dataset
 	 * 
 	 * @throws XPathExpressionException
 	 * @throws SAXException
@@ -52,22 +61,25 @@ public class Dataset {
 	 * @throws ParserConfigurationException
 	 * @throws TransformerException
 	 */
-	public Dataset() throws XPathExpressionException, SAXException, IOException, ParserConfigurationException, TransformerException {
-        Properties properties = new Properties();
-        try {
-            InputStream in = Topics.class.getResourceAsStream("/" + PROPERTIES_FILENAME);
-            properties.load(in);
+	public Dataset() throws XPathExpressionException, SAXException,
+			IOException, ParserConfigurationException, TransformerException {
+		Properties properties = new Properties();
+		try {
+			InputStream in = Topics.class.getResourceAsStream("/"
+					+ PROPERTIES_FILENAME);
+			properties.load(in);
 
-        } catch (IOException e) {
-            System.err.println("There was an error reading " + PROPERTIES_FILENAME + ": " + e.getCause()
-                    + " : " + e.getMessage());
-            System.exit(1);
-        }
-		
-        PATH = properties.getProperty("dataset.path");
-        loadDataset();
+		} catch (IOException e) {
+			System.err.println("There was an error reading "
+					+ PROPERTIES_FILENAME + ": " + e.getCause() + " : "
+					+ e.getMessage());
+			System.exit(1);
+		}
+
+		PATH = properties.getProperty("dataset.path");
+		loadDataset();
 	}
-	
+
 	/**
 	 * Loads the dataset.
 	 * 
@@ -77,7 +89,9 @@ public class Dataset {
 	 * @throws TransformerException
 	 * @throws XPathExpressionException
 	 */
-	private static void loadDataset() throws SAXException, IOException, ParserConfigurationException, TransformerException, XPathExpressionException {
+	private static void loadDataset() throws SAXException, IOException,
+			ParserConfigurationException, TransformerException,
+			XPathExpressionException {
 		DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
 		DocumentBuilder builder = factory.newDocumentBuilder();
 		document = builder.parse(new FileInputStream(PATH));
@@ -91,21 +105,22 @@ public class Dataset {
 	 * @return returns the list of nodes, retrieved using the expression
 	 * @throws XPathExpressionException
 	 */
-	private static List<String> getNodes(Document document, String expression) throws XPathExpressionException {
+	private static List<String> getNodes(Document document, String expression)
+			throws XPathExpressionException {
 		ArrayList<String> result = new ArrayList<String>();
-		NodeList nodeList = (NodeList) xPath.compile(expression).evaluate(document, XPathConstants.NODESET);
-			for (int i = 0; i < nodeList.getLength(); i++) {
-				// Only retrieve the NodeValue if possible
-				if (nodeList.item(i).getFirstChild() != null){
-					result.add(nodeList.item(i).getFirstChild().getNodeValue());
-				}
-				else {
-					result.add("null");
-				}
+		NodeList nodeList = (NodeList) xPath.compile(expression).evaluate(
+				document, XPathConstants.NODESET);
+		for (int i = 0; i < nodeList.getLength(); i++) {
+			// Only retrieve the NodeValue if possible
+			if (nodeList.item(i).getFirstChild() != null) {
+				result.add(nodeList.item(i).getFirstChild().getNodeValue());
+			} else {
+				result.add("null");
 			}
+		}
 
 		return result;
-	}	
+	}
 
 	/**
 	 * Retrieve the complete dataset
@@ -117,7 +132,9 @@ public class Dataset {
 	 * @throws ParserConfigurationException
 	 * @throws TransformerException
 	 */
-	public List<String> getDataset() throws XPathExpressionException, SAXException, IOException, ParserConfigurationException, TransformerException {		
+	public List<String> getDataset() throws XPathExpressionException,
+			SAXException, IOException, ParserConfigurationException,
+			TransformerException {
 		List<String> result = new ArrayList<String>();
 		result.addAll(getTitles());
 		result.addAll(getAlternatives());
@@ -140,9 +157,11 @@ public class Dataset {
 		result.addAll(getLicenses());
 		return result;
 	}
-	
+
 	/**
-	 * Get all titles. Can't be just retrieved using the title tag, since some videos have both an English and Dutch title, while some have only a Dutch or English title.
+	 * Get all titles. Can't be just retrieved using the title tag, since some
+	 * videos have both an English and Dutch title, while some have only a Dutch
+	 * or English title.
 	 * 
 	 * @return a list of all titles in the dataset
 	 * @throws XPathExpressionException
@@ -150,31 +169,39 @@ public class Dataset {
 	 * @throws IOException
 	 * @throws ParserConfigurationException
 	 * @throws TransformerException
-	 */	
-	public List<String> getTitles() throws XPathExpressionException, SAXException, IOException, ParserConfigurationException, TransformerException {
+	 */
+	public List<String> getTitles() throws XPathExpressionException,
+			SAXException, IOException, ParserConfigurationException,
+			TransformerException {
 		List<String> result = new ArrayList<String>();
-		NodeList nodeList = (NodeList) xPath.compile("OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']").evaluate(document, XPathConstants.NODESET);
-		
+		NodeList nodeList = (NodeList) xPath.compile(
+				"OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']")
+				.evaluate(document, XPathConstants.NODESET);
+
 		for (int i = 0; i < nodeList.getLength(); i++) {
 			NodeList metaData = nodeList.item(i).getChildNodes();
 			String title = "";
-			
+
 			for (int j = 0; j < metaData.getLength(); j++) {
 				String nodeName = metaData.item(j).getNodeName();
 				if (nodeName.equals("oi:title") && title.equals("")) {
 					title = metaData.item(j).getTextContent();
 				}
-				//For the case that there are an English and Dutch title and the English is mentioned first, still pick the Dutch
-				else if (nodeName.equals("oi:title") && !(title.equals("")) && metaData.item(j).getAttributes().item(0).equals("xml:lang=\"nl\"")) {
+				// For the case that there are an English and Dutch title and
+				// the English is mentioned first, still pick the Dutch
+				else if (nodeName.equals("oi:title")
+						&& !(title.equals(""))
+						&& metaData.item(j).getAttributes().item(0)
+								.equals("xml:lang=\"nl\"")) {
 					title = metaData.item(j).getTextContent();
 				}
 			}
 			result.add(title);
 		}
-				
+
 		return result;
 	}
-	
+
 	/**
 	 * Retrieves all Dutch alternatives
 	 * 
@@ -182,7 +209,9 @@ public class Dataset {
 	 * @throws XPathExpressionException
 	 */
 	public List<String> getAlternatives() throws XPathExpressionException {
-		return getNodes(document, "OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:alternative'][@lang='nl']");		
+		return getNodes(
+				document,
+				"OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:alternative'][@lang='nl']");
 	}
 
 	/**
@@ -192,9 +221,11 @@ public class Dataset {
 	 * @throws XPathExpressionException
 	 */
 	public List<String> getCreators() throws XPathExpressionException {
-		return getNodes(document, "OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:creator'][@lang='nl']");
+		return getNodes(
+				document,
+				"OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:creator'][@lang='nl']");
 	}
-	
+
 	/**
 	 * Retrieves all Dutch subjects
 	 * 
@@ -202,9 +233,11 @@ public class Dataset {
 	 * @throws XPathExpressionException
 	 */
 	public List<String> getSubjects() throws XPathExpressionException {
-		return getNodes(document, "OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:subject'][@lang='nl']");
+		return getNodes(
+				document,
+				"OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:subject'][@lang='nl']");
 	}
-	
+
 	/**
 	 * Retrieves all Dutch descriptions
 	 * 
@@ -212,9 +245,11 @@ public class Dataset {
 	 * @throws XPathExpressionException
 	 */
 	public List<String> getDescriptions() throws XPathExpressionException {
-		return getNodes(document, "OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:description'][@lang='nl']");
+		return getNodes(
+				document,
+				"OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:description'][@lang='nl']");
 	}
-	
+
 	/**
 	 * Retrieves all Dutch abstracts
 	 * 
@@ -222,39 +257,47 @@ public class Dataset {
 	 * @throws XPathExpressionException
 	 */
 	public List<String> getAbstracts() throws XPathExpressionException {
-		return getNodes(document, "OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:abstract'][@lang='nl']");
+		return getNodes(
+				document,
+				"OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:abstract'][@lang='nl']");
 	}
-	
-	/** 
-	 * Retrieves all publishers 
+
+	/**
+	 * Retrieves all publishers
 	 * 
 	 * @return a list of all publishers in the dataset
 	 * @throws XPathExpressionException
 	 */
 	public List<String> getPublishers() throws XPathExpressionException {
 		List<String> result = new ArrayList<String>();
-		NodeList nodeList = (NodeList) xPath.compile("OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']").evaluate(document, XPathConstants.NODESET);
-		
+		NodeList nodeList = (NodeList) xPath.compile(
+				"OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']")
+				.evaluate(document, XPathConstants.NODESET);
+
 		for (int i = 0; i < nodeList.getLength(); i++) {
 			NodeList metaData = nodeList.item(i).getChildNodes();
 			String publisher = "";
-			
+
 			for (int j = 0; j < metaData.getLength(); j++) {
 				String nodeName = metaData.item(j).getNodeName();
 				if (nodeName.equals("oi:publisher") && publisher.equals("")) {
 					publisher = metaData.item(j).getTextContent();
 				}
-				//For the case that there are an publisher with lang nl and one with no attributes, pick the one with lang nl. This is because the one without attributes contains a link.
-				else if (nodeName.equals("oi:publisher") && !(publisher.equals(""))) {
+				// For the case that there are an publisher with lang nl and one
+				// with no attributes, pick the one with lang nl. This is
+				// because the one without attributes contains a link.
+				else if (nodeName.equals("oi:publisher")
+						&& !(publisher.equals(""))) {
 					if (metaData.item(j).hasAttributes()) {
-						if (metaData.item(j).getAttributes().item(0).equals("xml:lang=\"nl\""))
+						if (metaData.item(j).getAttributes().item(0)
+								.equals("xml:lang=\"nl\""))
 							publisher = metaData.item(j).getTextContent();
-					}						
+					}
 				}
 			}
 			result.add(publisher);
 		}
-				
+
 		return result;
 	}
 
@@ -265,7 +308,9 @@ public class Dataset {
 	 * @throws XPathExpressionException
 	 */
 	public List<String> getContributors() throws XPathExpressionException {
-		return getNodes(document, "OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:oi:contributor']");
+		return getNodes(
+				document,
+				"OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:oi:contributor']");
 	}
 
 	/**
@@ -275,7 +320,9 @@ public class Dataset {
 	 * @throws XPathExpressionException
 	 */
 	public List<String> getDates() throws XPathExpressionException {
-		return getNodes(document, "OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:date']");
+		return getNodes(
+				document,
+				"OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:date']");
 	}
 
 	/**
@@ -285,7 +332,9 @@ public class Dataset {
 	 * @throws XPathExpressionException
 	 */
 	public List<String> getTypes() throws XPathExpressionException {
-		return getNodes(document, "OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:type']");
+		return getNodes(
+				document,
+				"OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:type']");
 	}
 
 	/**
@@ -295,29 +344,37 @@ public class Dataset {
 	 * @throws XPathExpressionException
 	 */
 	public List<String> getExtents() throws XPathExpressionException {
-		return getNodes(document, "OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:extent']");
+		return getNodes(
+				document,
+				"OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:extent']");
 	}
 
 	/**
-	 * Retrieves a link to all mpegs. Be aware that not every video has a mpeg link
+	 * Retrieves a link to all mpegs. Be aware that not every video has a mpeg
+	 * link
 	 * 
 	 * @return a list of links to all mpegs in the dataset
 	 * @throws XPathExpressionException
 	 */
 	public List<String> getMediums() throws XPathExpressionException {
-		return getNodes(document, "OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:medium'][@format='intermediate']");
+		return getNodes(
+				document,
+				"OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:medium'][@format='intermediate']");
 	}
-	
+
 	/**
-	 * Retrieves for every video a link to a video format. HD formats are preferred. 
+	 * Retrieves for every video a link to a video format. HD formats are
+	 * preferred.
 	 * 
 	 * @return a list of links to video formats
 	 * @throws XPathExpressionException
 	 */
 	public List<String> getUniqueMediums() throws XPathExpressionException {
 		List<String> list = new ArrayList<String>();
-		NodeList nodeList = (NodeList) xPath.compile("OAI-PMH/ListRecords/record").evaluate(document, XPathConstants.NODESET);
-			
+		NodeList nodeList = (NodeList) xPath.compile(
+				"OAI-PMH/ListRecords/record").evaluate(document,
+				XPathConstants.NODESET);
+
 		for (int i = 0; i < nodeList.getLength(); i++) {
 			String webm = "";
 			String ogv_sd = "";
@@ -326,59 +383,53 @@ public class Dataset {
 			String mp4_hd = "";
 			String mpeg = "";
 			String mpg = "";
-			
-			NodeList videoMetadata = nodeList.item(i).getChildNodes().item(3).getChildNodes().item(1).getChildNodes();
+
+			NodeList videoMetadata = nodeList.item(i).getChildNodes().item(3)
+					.getChildNodes().item(1).getChildNodes();
 			for (int j = 0; j < videoMetadata.getLength(); j++) {
 				if (videoMetadata.item(j).getNodeName().equals("oi:medium")) {
 					String text = videoMetadata.item(j).getTextContent();
 					if (text.contains(".webm")) {
 						webm = text;
 					}
-					//For ogv and mp4 there are sd and hd formats
+					// For ogv and mp4 there are sd and hd formats
 					else if (text.contains(".ogv")) {
-						if (videoMetadata.item(j).getAttributes().item(0).equals("format=\"hd\""))
+						if (videoMetadata.item(j).getAttributes().item(0)
+								.equals("format=\"hd\""))
 							ogv_hd = text;
 						else
 							ogv_sd = text;
-					}
-					else if (text.contains(".mp4")) {
-						if (videoMetadata.item(j).getAttributes().item(0).equals("format=\"hd\""))
+					} else if (text.contains(".mp4")) {
+						if (videoMetadata.item(j).getAttributes().item(0)
+								.equals("format=\"hd\""))
 							mp4_hd = text;
 						else
 							mp4_sd = text;
-					}
-					else if (text.contains(".mpeg")) {
+					} else if (text.contains(".mpeg")) {
 						mpeg = text;
-					}
-					else if (text.contains(".mpg")) {
+					} else if (text.contains(".mpg")) {
 						mpg = text;
 					}
 				}
 			}
-			
+
 			if (!(mp4_hd.equals(""))) {
 				list.add(mp4_hd);
-			}
-			else if (!(ogv_hd.equals(""))) {
+			} else if (!(ogv_hd.equals(""))) {
 				list.add(ogv_hd);
-			}
-			else if (!(mp4_sd.equals(""))) {
+			} else if (!(mp4_sd.equals(""))) {
 				list.add(mp4_sd);
-			}
-			else if (!(ogv_sd.equals(""))) {
+			} else if (!(ogv_sd.equals(""))) {
 				list.add(ogv_sd);
-			}
-			else if (!(mpeg.equals(""))) {
+			} else if (!(mpeg.equals(""))) {
 				list.add(mpeg);
-			}
-			else if (!(webm.equals(""))) {
+			} else if (!(webm.equals(""))) {
 				list.add(webm);
-			}
-			else if (!(mpg.equals(""))) {
+			} else if (!(mpg.equals(""))) {
 				list.add(mpg);
 			}
-		}		
-		
+		}
+
 		return list;
 	}
 
@@ -389,17 +440,22 @@ public class Dataset {
 	 * @throws XPathExpressionException
 	 */
 	public List<String> getOIIdentifiers() throws XPathExpressionException {
-		return getNodes(document, "OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:identifier']");
+		return getNodes(
+				document,
+				"OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:identifier']");
 	}
-	
+
 	/**
-	 * Retrieves a list of identifiers automatically created. This list contains a identifier for all videos. In the OIIdentifiers list not every video has a identifier.
+	 * Retrieves a list of identifiers automatically created. This list contains
+	 * a identifier for all videos. In the OIIdentifiers list not every video
+	 * has a identifier.
 	 * 
 	 * @return a list of all identifiers in the dataset
-	 * @throws XPathExpressionException 
+	 * @throws XPathExpressionException
 	 */
 	public List<String> getIdentifiers() throws XPathExpressionException {
-		return getNodes(document, "OAI-PMH/ListRecords/record/header/identifier");
+		return getNodes(document,
+				"OAI-PMH/ListRecords/record/header/identifier");
 	}
 
 	/**
@@ -409,7 +465,9 @@ public class Dataset {
 	 * @throws XPathExpressionException
 	 */
 	public List<String> getLanguages() throws XPathExpressionException {
-		return getNodes(document, "OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:language']");
+		return getNodes(
+				document,
+				"OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:language']");
 	}
 
 	/**
@@ -419,7 +477,9 @@ public class Dataset {
 	 * @throws XPathExpressionException
 	 */
 	public List<String> getReferences() throws XPathExpressionException {
-		return getNodes(document, "OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:references'][@lang='nl']");
+		return getNodes(
+				document,
+				"OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:references'][@lang='nl']");
 	}
 
 	/**
@@ -429,9 +489,11 @@ public class Dataset {
 	 * @throws XPathExpressionException
 	 */
 	public List<String> getSpatials() throws XPathExpressionException {
-		return getNodes(document, "OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:spatial'][@lang='nl']");
+		return getNodes(
+				document,
+				"OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:spatial'][@lang='nl']");
 	}
-	
+
 	/**
 	 * Retrieves all Dutch AttributionNames
 	 * 
@@ -439,7 +501,9 @@ public class Dataset {
 	 * @throws XPathExpressionException
 	 */
 	public List<String> getAttributionNames() throws XPathExpressionException {
-		return getNodes(document, "OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:attributionName'][@lang='nl']");
+		return getNodes(
+				document,
+				"OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:attributionName'][@lang='nl']");
 	}
 
 	/**
@@ -449,7 +513,9 @@ public class Dataset {
 	 * @throws XPathExpressionException
 	 */
 	public List<String> getAttributionURLs() throws XPathExpressionException {
-		return getNodes(document, "OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:attributionURL']");
+		return getNodes(
+				document,
+				"OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:attributionURL']");
 	}
 
 	/**
@@ -459,69 +525,147 @@ public class Dataset {
 	 * @throws XPathExpressionException
 	 */
 	public List<String> getLicenses() throws XPathExpressionException {
-		return getNodes(document, "OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:license']");
+		return getNodes(
+				document,
+				"OAI-PMH/ListRecords/record/metadata//*[name()='oai_oi:oi']//*[name()='oi:license']");
 	}
 	
 	/**
 	 * Writes per video all the links to a video file to JSON
 	 * 
 	 * @throws XPathExpressionException
+	 * @throws IOException
+	 * @throws DOMException
 	 */
-	private void toVideoIdJSON() throws XPathExpressionException {
+	private void toVideoIdJSON() throws XPathExpressionException, DOMException,
+			IOException {
 		List<String> list = new ArrayList<String>();
-		NodeList nodeList = (NodeList) xPath.compile("OAI-PMH/ListRecords/record").evaluate(document, XPathConstants.NODESET);
+		NodeList nodeList = (NodeList) xPath.compile(
+				"OAI-PMH/ListRecords/record").evaluate(document,
+				XPathConstants.NODESET);
 		Gson gson = new GsonBuilder().setPrettyPrinting().create();
-				
+
 		for (int i = 0; i < 500; i++) {
-			Map<String,String> myJSON = new LinkedHashMap<String, String>();
-			String id = nodeList.item(i).getChildNodes().item(1).getChildNodes().item(1).getTextContent();
-			String webm = "";
-			String ogv = "";
-			String mp4 = "";
-			String mpeg = "";
-			String mpg = "";
-			
-			NodeList videoMetadata = nodeList.item(i).getChildNodes().item(3).getChildNodes().item(1).getChildNodes();
-			for (int j = 0; j < videoMetadata.getLength(); j++) {
-				if (videoMetadata.item(j).getNodeName().equals("oi:medium")) {
-					String text = videoMetadata.item(j).getTextContent();
-					if (text.contains(".webm")) {
-						webm = text;
-					}
-					else if (text.contains(".ogv")) {
-						ogv = text;
-					}
-					else if (text.contains(".mp4")) {
-						mp4 = text;				
-					}
-					else if (text.contains(".mpeg")) {
-						mpeg = text;
-					}
-					else if (text.contains(".mpg")) {
-						mpg = text;
+			Map<String, String> myJSON = new LinkedHashMap<String, String>();
+			String id = nodeList.item(i).getChildNodes().item(1)
+					.getChildNodes().item(1).getTextContent();
+			if (readVideoIds().contains(id.replace("oai:openimages.eu:", ""))) {
+				String webm = "";
+				String ogv = "";
+				String mp4 = "";
+				String mpeg = "";
+				String mpg = "";
+
+				NodeList videoMetadata = nodeList.item(i).getChildNodes()
+						.item(3).getChildNodes().item(1).getChildNodes();
+				for (int j = 0; j < videoMetadata.getLength(); j++) {
+					if (videoMetadata.item(j).getNodeName().equals("oi:medium")) {
+						String text = videoMetadata.item(j).getTextContent();
+						if (text.contains(".webm")) {
+							webm = text;
+						} else if (text.contains(".ogv")) {
+							ogv = text;
+						} else if (text.contains(".mp4")) {
+							mp4 = text;
+						} else if (text.contains(".mpeg")) {
+							mpeg = text;
+						} else if (text.contains(".mpg")) {
+							mpg = text;
+						}
 					}
 				}
+
+				myJSON.put("videoId", id);
+				myJSON.put("webm", webm);
+				myJSON.put("ogv", ogv);
+				myJSON.put("mp4", mp4);
+				myJSON.put("mpeg", mpeg);
+				myJSON.put("mpg", mpg);
+
+				list.add(gson.toJson(myJSON));
 			}
-			
-			myJSON.put("videoId", id);	
-			myJSON.put("webm", webm);
-			myJSON.put("ogv", ogv);
-			myJSON.put("mp4", mp4);
-			myJSON.put("mpeg", mpeg);
-			myJSON.put("mpg", mpg);
-			
-			list.add(gson.toJson(myJSON));
-		}		
-				
+		}
+
 		System.out.println(list);
-		
+
 		try {
 			FileWriter file = new FileWriter("dataset.json");
 			file.write(list.toString());
 			file.flush();
 			file.close();
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
-		catch (IOException e) {
+	}
+
+	private static ArrayList<String> readVideoIds() throws IOException {
+		ArrayList<String> result = new ArrayList<String>();
+
+		BufferedReader in = new BufferedReader(new FileReader(
+				"two annotators_need_third.txt"));
+		String line;
+		while ((line = in.readLine()) != null) {
+			//result.add(line);
+			String[] ids = line.split(" ");
+			for (int i = 1; i < ids.length; i++) {
+				if (!ids[i].isEmpty()) {
+					if (!ids[i].contains("["))
+						result.add(ids[i]);
+				}
+			}
+		}
+		in.close();
+
+		return result;
+	}
+
+	public void toJSON() throws XPathExpressionException, IOException {
+		ArrayList<String> strategies = new ArrayList<String>();
+		strategies.add("strategy1.csv");
+		List<String> list = new ArrayList<String>();
+
+		for (String csvFile : strategies) {
+			String line = "";
+			BufferedReader br = new BufferedReader(new FileReader(csvFile));
+
+			Gson gson = new GsonBuilder().setPrettyPrinting().create();
+			Map<String, String> myJSON = new LinkedHashMap<String, String>();
+
+			List<String> ids = getIdentifiers();
+			List<String> mediums = getUniqueMediums();
+
+			while ((line = br.readLine()) != null) {
+				String[] split_id = line.split(",");
+				if (!(split_id[0].contains("Video1") && split_id[1]
+						.contains("Video2"))) {
+					String id1 = "oai:openimages.eu:" + split_id[0];
+					String id2 = "oai:openimages.eu:" + split_id[1];
+
+					int index1 = ids.indexOf(id1);
+					String medium1 = mediums.get(index1);
+					myJSON.put("videoId1", id1);
+					myJSON.put("webm1", medium1);
+
+					int index2 = ids.indexOf(id2);
+					String medium2 = mediums.get(index2);
+					myJSON.put("videoId2", id2);
+					myJSON.put("webm2", medium2);
+
+					//Don't add double pairs
+					if (!list.contains(gson.toJson(myJSON)))
+						list.add(gson.toJson(myJSON));
+				}
+			}
+			br.close();
+		}
+		System.out.println(list);
+
+		try {
+			FileWriter file = new FileWriter("strategies.json");
+			file.write(list.toString());
+			file.flush();
+			file.close();
+		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}

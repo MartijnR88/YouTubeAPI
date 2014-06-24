@@ -38,8 +38,8 @@ public class Statistics {
 			TransformerException {
 		List<String> zones = new ArrayList<String>();
 		zones.add(YouTubeRetriever.TITLE);
-		zones.add(YouTubeRetriever.DATE);
-		zones.add(YouTubeRetriever.PUBLISHER);
+		//zones.add(YouTubeRetriever.DATE);
+		//zones.add(YouTubeRetriever.PUBLISHER);
 		Dataset dataset = new Dataset();
 		
 		for (String zone : zones) {
@@ -49,14 +49,14 @@ public class Statistics {
 				metadata_zone = dataset.getTitles();
 			}
 			
-			else if (zone.equals(YouTubeRetriever.PUBLISHER)) {
-				metadata_zone = dataset.getPublishers();
-			}
-			
-			else if (zone.equals(YouTubeRetriever.DATE)) {
-				metadata_zone = dataset.getDates();
-				metadata_zone = YouTubeRetriever.formatDates(metadata_zone);
-			}
+//			else if (zone.equals(YouTubeRetriever.PUBLISHER)) {
+//				metadata_zone = dataset.getPublishers();
+//			}
+//			
+//			else if (zone.equals(YouTubeRetriever.DATE)) {
+//				metadata_zone = dataset.getDates();
+//				metadata_zone = YouTubeRetriever.formatDates(metadata_zone);
+//			}
 			
 			//writeToCSV(retrieveRelatedVideos(metadata_zone, zone), zone + ".csv");
 			writeToCSV(retrieveRelatedofRelatedVideos(metadata_zone, zone), "RelatedofRelated" + zone + ".csv");
